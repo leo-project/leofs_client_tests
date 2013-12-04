@@ -67,6 +67,20 @@ begin
     
     # DELETE
     object.delete
+
+    # Multi part
+    file_path_for_multipart_upload = '32M.dat'
+    open(file_path_for_multipart_upload) do |file|
+      uploading_object = bucket.objects[File.basename(file.path)]
+      uploading_object.multipart_upload do |upload|
+        while !file.eof?
+          upload.add_part(file.read 5242880) ## 5MB ##
+          p('Aborted') if upload.aborted?
+        end
+      end
+    end
+    large_object = bucket.objects["32M.dat"]
+    image = large_object.read
     
     # GET(To be handled at the below rescure block)
     image = object.read
