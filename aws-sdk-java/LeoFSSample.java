@@ -41,7 +41,7 @@ public class LeoFSSample {
         AmazonS3 s3 = new AmazonS3Client(credentials, config);
 
         final String bucketName = "test-bucket-" + UUID.randomUUID();
-        final String key = "test-key";
+        final String key = "test-key<>";
 
         try {
             // Create a bucket
@@ -68,6 +68,14 @@ public class LeoFSSample {
                                    "Size:" + objectSummary.getSize());
             }
 
+            // Try to retrieve no existing list of objects from the LeoFS
+            ObjectListing objectListing404 =
+                s3.listObjects(new ListObjectsRequest(bucketName, "noexistdir", "", "", 1000));
+            for (S3ObjectSummary objectSummary : objectListing404.getObjectSummaries()) {
+                System.out.println(objectSummary.getKey() +
+                                   "Size:" + objectSummary.getSize());
+            }
+
             // DELETE an object from the LeoFS
             s3.deleteObject(bucketName, key);
 
@@ -75,10 +83,11 @@ public class LeoFSSample {
             s3.deleteBucket(bucketName);
 
         } catch (AmazonServiceException ase) {
-            System.out.println(ase.getMessage());
+            System.out.println(ase);
             System.out.println(ase.getStatusCode());
+            ase.printStackTrace();
         } catch (AmazonClientException ace) {
-            System.out.println(ace.getMessage());
+            ace.printStackTrace();
         }
     }
 
