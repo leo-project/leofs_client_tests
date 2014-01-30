@@ -53,11 +53,18 @@ public class LeoFSSample {
             }
 
             // PUT an object into the LeoFS
-            s3.putObject(new PutObjectRequest(bucketName, key, createFile()));
+            for (int i = 0; i < 1000; i++) {
+                s3.putObject(new PutObjectRequest(bucketName, key + i, createFile()));
+            }
 
-            // GET an object from the LeoFS
-            S3Object object = s3.getObject(new GetObjectRequest(bucketName, key));
-            dumpInputStream(object.getObjectContent());
+            // GET an no existing object from the LeoFS
+            try {
+                S3Object object = s3.getObject(new GetObjectRequest(bucketName, key));
+                dumpInputStream(object.getObjectContent());
+            } catch (Exception ex) {
+                System.out.println(ex);
+                ex.printStackTrace();
+            } 
 
             // Retrieve list of objects from the LeoFS
             ObjectListing objectListing =
@@ -77,7 +84,7 @@ public class LeoFSSample {
             }
 
             // DELETE an object from the LeoFS
-            s3.deleteObject(bucketName, key);
+            //s3.deleteObject(bucketName, key);
 
             // DELETE a bucket from the LeoFS
             s3.deleteBucket(bucketName);
