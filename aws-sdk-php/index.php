@@ -71,10 +71,10 @@ try {
     print("\n\n");// GET object file
     $object = $client->getObject(array(
         "Bucket" => "test",
-        "Key" => "README"
+        "Key" => "README",
         "SaveAs" => "README.copy"
     ));
-    print("\n\n")
+    print("\n\n");
 // DELETE object file
 	$client->deleteObject(array(
 		"Bucket" => "test",
@@ -86,7 +86,7 @@ try {
 	$result = $client->deleteBucket(array(
 		"Bucket" => "test"
 	));
-	echo " object deleted \n\n ";
+	echo " bucket deleted \n\n ";
 }
 catch (\Aws\S3\Exception\S3Exception $e)
 {
@@ -94,4 +94,3 @@ catch (\Aws\S3\Exception\S3Exception $e)
     echo $e->getMessage();
 }
 ?>
-
