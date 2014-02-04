@@ -41,7 +41,7 @@ public class LeoFSSample {
         AmazonS3 s3 = new AmazonS3Client(credentials, config);
 
         final String bucketName = "test-bucket-" + UUID.randomUUID();
-        final String key = "test-key<>";
+        final String key = "test-key";
 
         try {
             // Create a bucket
@@ -53,18 +53,11 @@ public class LeoFSSample {
             }
 
             // PUT an object into the LeoFS
-            for (int i = 0; i < 1000; i++) {
-                s3.putObject(new PutObjectRequest(bucketName, key + i, createFile()));
-            }
+            s3.putObject(new PutObjectRequest(bucketName, key, createFile()));
 
-            // GET an no existing object from the LeoFS
-            try {
-                S3Object object = s3.getObject(new GetObjectRequest(bucketName, key));
-                dumpInputStream(object.getObjectContent());
-            } catch (Exception ex) {
-                System.out.println(ex);
-                ex.printStackTrace();
-            } 
+            // GET an object from the LeoFS
+            S3Object object = s3.getObject(new GetObjectRequest(bucketName, key));
+            dumpInputStream(object.getObjectContent());
 
             // Retrieve list of objects from the LeoFS
             ObjectListing objectListing =
@@ -75,26 +68,17 @@ public class LeoFSSample {
                                    "Size:" + objectSummary.getSize());
             }
 
-            // Try to retrieve no existing list of objects from the LeoFS
-            ObjectListing objectListing404 =
-                s3.listObjects(new ListObjectsRequest(bucketName, "noexistdir", "", "", 1000));
-            for (S3ObjectSummary objectSummary : objectListing404.getObjectSummaries()) {
-                System.out.println(objectSummary.getKey() +
-                                   "Size:" + objectSummary.getSize());
-            }
-
             // DELETE an object from the LeoFS
-            //s3.deleteObject(bucketName, key);
+            s3.deleteObject(bucketName, key);
 
             // DELETE a bucket from the LeoFS
             s3.deleteBucket(bucketName);
 
         } catch (AmazonServiceException ase) {
-            System.out.println(ase);
+            System.out.println(ase.getMessage());
             System.out.println(ase.getStatusCode());
-            ase.printStackTrace();
         } catch (AmazonClientException ace) {
-            ace.printStackTrace();
+            System.out.println(ace.getMessage());
         }
     }
 

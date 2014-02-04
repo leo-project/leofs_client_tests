@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 which s3cmd && \
     s3cmd mb s3://s3cmd-bucket && \
     s3cmd put README s3://s3cmd-bucket/README && \
