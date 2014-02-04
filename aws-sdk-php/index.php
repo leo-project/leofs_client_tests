@@ -13,62 +13,85 @@ $client = S3Client::factory(array(
   'base_url' => 'http://localhost:8080'
 ));
 try {
-echo "Bucket List\n";
-echo "------------\n\n";
+	echo "Bucket List\n";
+	echo "------------\n\n";
 // list buckets
-$buckets = $client->listBuckets()->toArray();
-foreach($buckets as $bucket){
-  print_r($bucket);
-}
-print("\n\n");
-echo "Create New Bucket\n\n";
+	$buckets = $client->listBuckets()->toArray();
+	foreach($buckets as $bucket){
+	print_r($bucket);
+	}
+	print("\n\n");
+	echo "Create New Bucket\n\n";
 // create bucket
-$result = $client->createBucket(array(
-  "Bucket" => "test"
-));
+	$result = $client->createBucket(array(
+	"Bucket" => "test"
+	));
 
-echo "Put object into Bucket \n\n";
-
+	echo "Put object into Bucket \n\n";
 // PUT object
-$client->putObject(array(
-  "Bucket" => "test",
-  "Key" => "key-test",
-  "Body" => "Hello, world!"
-));
+	$client->putObject(array(
+		"Bucket" => "test",
+		"Key" => "key-test",
+		"Body" => "Hello, world!"
+		));
 
-echo "Get object from Bucket";
+	echo "Get object from Bucket";
 // GET object
-$object = $client->getObject(array(
-  "Bucket" => "test",
-  "Key" => "key-test"
-));
-print($object->get("Body"));
-print("\n\n");
+	$object = $client->getObject(array(
+		"Bucket" => "test",
+		"Key" => "key-test"
+		));
+	print($object->get("Body"));
+	print("\n\n");
 
-echo "Head object\n\n " ;
+	echo "Head object\n\n " ;
 // HEAD object
-$headers = $client->headObject(array(
-  "Bucket" => "test",
-  "Key" => "key-test"
-));
-print_r($headers->toArray());
+	$headers = $client->headObject(array(
+		"Bucket" => "test",
+		"Key" => "key-test"
+		));
+	print_r($headers->toArray());
 
-echo "delete object \n\n";
+	echo "delete object \n\n";
 // DELETE object
-$client->deleteObject(array(
-  "Bucket" => "test",
-  "Key" => "key-test"
-));
-echo "delete bucket \n\n";
+	$client->deleteObject(array(
+		"Bucket" => "test",
+		"Key" => "key-test"
+		));
+// PUT file
+    $client->putObject(array(
+		"Bucket" => "test",
+		"Key" => "README",
+		"Body" => fopen('README', 'r')
+		));
+// HEAD object file
+    $headers = $client->headObject(array(
+       "Bucket" => "test",          "Key" => "README"        ));
+    print_r($headers->toArray());
+    print("\n\n");// GET object file
+    $object = $client->getObject(array(
+        "Bucket" => "test",
+        "Key" => "README"
+        "SaveAs" => "README.copy"
+    ));
+    print("\n\n")
+// DELETE object file
+	$client->deleteObject(array(
+		"Bucket" => "test",
+		"Key" => "README"
+	));
+	
+	echo "delete bucket \n\n";
 // delete bucket
-$result = $client->deleteBucket(array(
-  "Bucket" => "test"
-));
-echo " object deleted \n\n ";
+	$result = $client->deleteBucket(array(
+		"Bucket" => "test"
+	));
+	echo " object deleted \n\n ";
 }
 catch (\Aws\S3\Exception\S3Exception $e)
 {
-// Exeception messages 
-         echo $e->getMessage();
+// Exeception messages
+    echo $e->getMessage();
 }
 ?>
+
