@@ -120,6 +120,12 @@ try:
         print key.name, "\tDeleted Successfully", key.delete()
         if key.exists():
             raise "\tObject is not Deleted Successfully\n"
+        try:
+            print "Deleted files:", key.read()
+        except Exception, not_found:
+            print not_found
+            continue
+        raise "Deleted Failed\n"
     print "\nFile Delete Test [End]\n"
 
     # Get-Put ACL
