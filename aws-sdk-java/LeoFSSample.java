@@ -21,6 +21,7 @@ import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 
@@ -70,7 +71,17 @@ public class LeoFSSample {
 
             // DELETE an object from the LeoFS
             s3.deleteObject(bucketName, key);
-
+            try {
+                S3Object deleteObject = s3.getObject(new GetObjectRequest(bucketName, key));
+                System.out.println("[Failed]Delete Object");
+                System.exit(1);
+            } catch (AmazonS3Exception as3e) {
+                System.out.println(as3e.getMessage());
+                if (as3e.getStatusCode() != 404) {
+                    System.out.println("[Failed]Deleted Object exists!");
+                    System.exit(1);
+                }
+            }
             // DELETE a bucket from the LeoFS
             s3.deleteBucket(bucketName);
 
