@@ -172,10 +172,17 @@ begin
   puts "--------------------Delete Files--------------------\n"
   bucket.objects.with_prefix("").each do |obj|
     obj.delete
-    puts "#{obj.key} \t File Deleted Successfully..\n"
     if obj.exists?
       raise "Object is not Deleted Successfully\n"
     end
+    # to be not found
+    begin
+        obj.read
+    rescue AWS::S3::Errors::NoSuchKey
+        puts "#{obj.key} \t File Deleted Successfully..\n"
+        next
+    end
+    raise "Object is not Deleted Successfully\n"
   end
 
   # Get-Put ACL
