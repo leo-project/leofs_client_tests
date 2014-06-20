@@ -5,6 +5,7 @@ use Aws\Common\Enum\Region;
 use Aws\S3\S3Client;
 use Aws\S3\Model\MultipartUpload\UploadBuilder;
 use Aws\Common\Exception\MultipartUploadException;
+use Aws\S3\Exception\NoSuchKeyException;
 
 ini_set("memory_set",-1);
 $bucket_name="test";
@@ -164,7 +165,13 @@ try {
         if($client->doesObjectExist($bucket_name, $object["Key"])){
             throw new Exception( $object["Key"]."\tFile could not Deleted Successfully");
         }
-        print $object["Key"]."\t"."File Deleted Successfully\n";
+        // to be not found
+        try {
+            $client->getObject(array("Bucket" => $bucket_name, "Key" => $object["Key"]));
+            throw new Exception( $object["Key"]."\tFile could not Deleted Successfully");
+        } catch (\Aws\S3\Exception\NoSuchKeyException $e) {
+            print $object["Key"]."\t"."File Deleted Successfully\n";
+        }
     }
     print "DELETE Object Test [End]\n\n";
 
