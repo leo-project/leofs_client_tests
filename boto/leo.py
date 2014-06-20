@@ -17,7 +17,6 @@ AWS_SECRET_ACCESS_KEY = "802562235"
 BUCKET_NAME = "test" + str(random.randint(1,99999))  ## Dynamic BucketName
 FILE_NAME = "testFile"
 CHUNK_SIZE = 5 * 1024 * 1024
-mime_type = magic.open(magic.MAGIC_MIME)
 
 conn = S3Connection(AWS_ACCESS_KEY,
     AWS_SECRET_ACCESS_KEY,
@@ -49,8 +48,7 @@ try:
     file_object = open(file_path, "r")
     file_digest = hashlib.md5(file_object.read()).hexdigest()
     file_size = os.path.getsize(file_path)
-    mime_type.load()
-    file_type = mime_type.file(file_path)
+    file_type = magic.from_file(file_path, mime=True)
 
     # Files in Amazon S3 are called "objects" and are stored in buckets. A specific object is 
     # referred to by its key (i.e., name) and holds data. Here, we create a new object with 
