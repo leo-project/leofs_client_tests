@@ -1,5 +1,3 @@
 /leofs
-/aws-sdk-java/lib/
-/aws-sdk-java/third-party/
 /bootstrap.sh
 /aws-sdk-nodejs/node_modules/
