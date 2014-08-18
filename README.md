@@ -16,9 +16,16 @@ $ sudo apt-get install libmagic-dev
 * Install the gems
 
 ```bash
-# gem install aws-sdk
-# gem install content_type
+$ gem install aws-sdk
+$ gem install content_type
 ```
+
+* Execute the test-case
+
+```bash
+$ cd aws-sdk-ruby
+$ ruby leo.rb
+``` 
 
 ### Python - boto
 #### Install the libraries
@@ -27,3 +34,17 @@ $ sudo apt-get install libmagic-dev
 $ sudo pip install boto
 $ sudo pip install python-magic
 ```
+
+* Execute the test-case
+
+```bash
+$ python leo.py
+```
+
+### Java - aws-sdk-java
+
+### PHP - aws-sdk-php
+
+### Erlang - erlcloud
+
+### s3cmd
