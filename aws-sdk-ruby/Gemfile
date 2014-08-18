@@ -1,3 +1,7 @@
+##
+## content_type depends on libmagic
+##     - Ubuntu/Debian: sudo yum install libmagic-devel
+##     - CentOS/Fedora/RHEL: 
 source 'https://rubygems.org'
 gem 'aws-sdk', '~> 1'
 gem 'content_type'
