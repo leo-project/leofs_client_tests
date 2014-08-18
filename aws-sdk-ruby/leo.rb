@@ -48,13 +48,17 @@ begin
   file_path = "../temp_data/" + FileName
   fileObject =  open(file_path)
 
-  # PUT object using single-part method
+  # PUT an object using single-part method and the obj-name is "bucket-name"
+  obj = bucket.objects[Bucket].write(file: file_path, content_type: fileObject.content_type)
+
+  # PUT an object using single-part method
   obj = bucket.objects[FileName + ".single"].write(file: file_path, content_type: fileObject.content_type)
 
-  # PUT object using multi-part method
+  # PUT an object using multi-part method
   puts "File is being upload:\n"
   counter = fileObject.size / ChunkSize
   uploading_object = bucket.objects[File.basename(fileObject.path)]
+
   uploading_object.multipart_upload(:content_type => fileObject.content_type.to_s) do |upload|
     while !fileObject.eof?
       puts " #{upload.id} \t\t #{counter} "
@@ -68,6 +72,7 @@ begin
   # List objects in the bucket
   puts "----------List Files---------\n"
   bucket.objects.with_prefix("").each do |obj|
+    puts obj
     if !fileObject.size.eql? obj.content_length
        raise " Content length is changed for : #{obj.key}"
     end
@@ -78,6 +83,8 @@ begin
   fileObject.seek(0)
   fileDigest = Digest::MD5.hexdigest(fileObject.read)
   metadata = bucket.objects[FileName + ".single"].head
+  puts metadata
+
   if !((fileObject.size.eql? metadata.content_length) && (fileDigest.eql? metadata.etag.gsub('"', ''))) ## for future use  && (fileObject.content_type.eql? metadata.content_type))
     raise "Single Part File Metadata could not match"
   else
@@ -91,6 +98,7 @@ begin
     puts "Multipart Part File MetaData :"
     p metadata
   end
+
 
   # GET object(To be handled at the below rescue block)
   if !fileObject.size.eql?  bucket.objects[FileName + ".single"].head.content_length
