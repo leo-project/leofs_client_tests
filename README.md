@@ -20,7 +20,7 @@ $ gem install aws-sdk
 $ gem install content_type
 ```
 
-* Execute the test-case
+#### Execute the test-case
 
 ```bash
 $ cd aws-sdk-ruby
@@ -35,7 +35,7 @@ $ sudo pip install boto
 $ sudo pip install python-magic
 ```
 
-* Execute the test-case
+#### Execute the test-case
 
 ```bash
 $ python leo.py
