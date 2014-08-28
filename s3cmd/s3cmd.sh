@@ -4,6 +4,7 @@
 which s3cmd && \
     s3cmd mb s3://s3cmd-bucket && \
     s3cmd put README s3://s3cmd-bucket/README && \
+    s3cmd put s3cmd-bucket s3://s3cmd-bucket/s3cmd-bucket && \
     s3cmd ls s3://s3cmd-bucket && \
     s3cmd get s3://s3cmd-bucket/README README.copy && \
     diff README README.copy && rm README.copy && \

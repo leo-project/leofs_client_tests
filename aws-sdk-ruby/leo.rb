@@ -7,7 +7,7 @@ Endpoint = "localhost"
 Port = 8080
 AccessKeyId = "05236"
 SecretAccessKey = "802562235"
-FileName = "testFile"
+FileName = "testFile s"
 ChunkSize = 5 * 1024 * 1024  ## 5 MB chunk size
 Bucket = "test" + rand(99999).to_s  ## Dynamic BucketName
 
