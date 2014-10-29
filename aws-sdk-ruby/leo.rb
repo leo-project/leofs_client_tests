@@ -193,6 +193,25 @@ begin
     raise "Object is not Deleted Successfully\n"
   end
 
+  # List multi layered directories 
+  # PUT an object using single-part method and the obj-name is "bucket-name"
+  BaseDir = "a/b/c/"
+  obj = bucket.objects[BaseDir + "test"].write(file: file_path, content_type: fileObject.content_type)
+  obj2 = bucket.objects[BaseDir + "test2"].write(file: file_path, content_type: fileObject.content_type)
+  bucket.objects.with_prefix(BaseDir).each do |obj|
+    p obj
+  end
+
+  # Delete multi layered directories 
+  BaseDir2 = "a"
+  root_dir = bucket.objects[BaseDir2]
+  root_dir.delete
+  if root_dir.exists?
+    raise "Multi layered directories are not Deleted Successfully\n"
+  else
+    puts "\nMulti layered directories Deleted Successfully\n"
+  end
+
   # Get-Put ACL
   puts "\n#####Default ACL#####"
   puts "Owner ID : #{bucket.acl.owner.id}"
@@ -263,7 +282,7 @@ rescue
 ensure
   # Bucket Delete
   bucket = s3.buckets[Bucket]
-  bucket.clear!  #clear the versions only
+  #bucket.clear!  #clear the versions only
   bucket.delete
   puts "Bucket deleted Successfully\n"
 end
