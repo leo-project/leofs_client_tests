@@ -175,6 +175,34 @@ try {
     }
     print "DELETE Object Test [End]\n\n";
 
+    // Listing multi layered directories
+    print "Listing multi layered directories [Start]\n";
+    print "--------Listing multi layered directories-------- \n";
+    $base_dir = "a/b/c/";
+    $client->putObject(array("Bucket" => $bucket_name, "Key" => $base_dir."file", "Body" => fopen($file_path, "r")));
+    $client->putObject(array("Bucket" => $bucket_name, "Key" => $base_dir."file2", "Body" => fopen($file_path, "r")));
+    // @todo if Prefix is empty then the result must be "a" as a directory
+    $iterator = $client->getIterator("ListObjects", 
+        array("Bucket" => $bucket_name,
+              "Prefix" => $base_dir));
+    foreach($iterator as $object) {
+        if(!$file_size == $object["Size"]){
+            throw new Exception("Content length is changed for :".$object["Key"]);
+        }
+        print $object["Key"]."\t".$object["Size"]."\t".$object["LastModified"]."\n";
+    }
+    print "Listing multi layered directories [End]\n\n";
+
+    // Deleting multi layered directories
+    $base_dir = "a";
+    print "Deleting multi layered directories [Start]\n";
+    print "--------Deleting multi layered directories-------- \n";
+    $client->deleteObject(array( "Bucket" => $bucket_name, "Key" => $base_dir));
+    if($client->doesObjectExist($bucket_name, $base_dir)){
+        throw new Exception( $object["Key"]."\tFile could not Deleted Successfully");
+    }
+    print "Deleting multi layered directories [End]\n\n";
+
     // GET-PUT ACL
     print "Bucket ACL Test [Start]\n";
     print "#####Default ACL#####\n";
