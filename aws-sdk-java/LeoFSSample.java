@@ -184,6 +184,27 @@ public class LeoFSSample {
             System.out.println("ALL File deleted Successfully");
             System.out.println("DELETE Object Test [End]\n");
 
+            // Delete multi layered directories
+            System.out.println("DELETE multi layered directories Test [Start]");
+            String baseDir = "a/b/c/";
+            s3.putObject(new PutObjectRequest(bucketName, baseDir + "file", createFile()));
+            s3.putObject(new PutObjectRequest(bucketName, baseDir + "file2", createFile()));
+            ObjectListing objectListing2 =
+                s3.listObjects(new ListObjectsRequest().withBucketName(bucketName).withPrefix(baseDir));
+            System.out.println("-----List objects----");
+            for ( S3ObjectSummary objectSummary : objectListing2.getObjectSummaries() ) {
+                System.out.println(objectSummary.getKey() + " \t Size:" + objectSummary.getSize());
+            }
+            
+            baseDir = "a";
+            s3.deleteObject(bucketName, baseDir);
+            if ( doesFileExist(s3,bucketName,baseDir) ) {
+                throw new IOException("Object Not Deleted");
+            } else {
+                System.out.println(baseDir + " \t\t Deleted Successfully");
+            }
+            System.out.println("DELETE multi layered directories Test [End]\n");
+
             // GET-PUT ACL
             System.out.println("Bucket ACL Test [Start]");
             System.out.println("#####Default ACL#####");
