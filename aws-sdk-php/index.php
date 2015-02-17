@@ -127,6 +127,15 @@ try {
     print "Get Object Test passed Successfully\n";
     print "GET Object Test [End]\n\n";
 
+    print "GET non-existing Object Test [Start]\n";
+    try {
+        $client->getObject(array("Bucket" => $bucket_name, "Key" => $file_name.".nonexist"));
+        throw new Exception( $file_name.".nonexist"."\tFile must NOT be exist");
+    } catch (\Aws\S3\Exception\NoSuchKeyException $e) {
+        ;
+    }
+    print "GET non-existing Object Test [End]\n\n";
+
     // Download Object
     print "Download Object Test [Start]\n";
     $object = $client->getObject(array("Bucket" => $bucket_name, "Key" => "testFile", "SaveAs" => $file_name.".copy"));
