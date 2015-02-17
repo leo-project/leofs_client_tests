@@ -1,4 +1,4 @@
-#!/bin/env escript
+#!/usr/bin/env escript
 %% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
 %% ex: ft=erlang ts=4 sw=4 et
 
@@ -34,6 +34,14 @@ main(_Args) ->
         % GET an object from the LeoFS
         Obj = erlcloud_s3:get_object("erlang", "test-key", Conf2),
         io:format("[debug]inserted object:~p~n", [Obj]),
+        % GET an non-existing object from the LeoFS
+        try
+            NotFoundObj = erlcloud_s3:get_object("erlang", "test-key-nonexisting", Conf2),
+            io:format("[debug]not found object:~p~n", [NotFoundObj])
+        catch
+            error:{aws_error,{http_error,404,_,_}} ->
+                io:format("[debug]404 not found object~n")
+        end,
         % GET an object metadata from the LeoFS
         Meta = erlcloud_s3:get_object_metadata("erlang", "test-key", Conf2),
         io:format("[debug]metadata:~p~n", [Meta]),
@@ -41,8 +49,8 @@ main(_Args) ->
         DeletedObj = erlcloud_s3:delete_object("erlang", "test-key", Conf2),
         io:format("[debug]deleted object:~p~n", [DeletedObj]),
         try
-            NotFoundObj = erlcloud_s3:get_object("erlang", "test-key", Conf2),
-            io:format("[debug]not found object:~p~n", [NotFoundObj])
+            NotFoundObj2 = erlcloud_s3:get_object("erlang", "test-key", Conf2),
+            io:format("[debug]not found object:~p~n", [NotFoundObj2])
         catch
             error:{aws_error,{http_error,404,_,_}} ->
                 io:format("[debug]404 not found object~n")
