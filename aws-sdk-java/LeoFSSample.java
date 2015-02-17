@@ -151,8 +151,18 @@ public class LeoFSSample {
             }
             System.out.println("GET Object Test [End]\n");
 
+            // File Download not existing from LeoFS
+            System.out.println("GET non-existing Object Test [Start]");
+            try {
+                S3Object object_tmp = s3.getObject(new GetObjectRequest(bucketName, fileName + ".noexist"));
+                throw new IOException("Downloaded File must NOT be exist");
+            } catch ( AmazonServiceException ase ) {
+                System.out.println(ase.getMessage());
+                System.out.println(ase.getStatusCode());
+            }
+            System.out.println("GET non-existing Object Test [End]\n");
+
             // File copy bucket internally
-            
             System.out.println("COPY Object Test [Start]");
             s3.copyObject( bucketName, file.getName(), bucketName, fileName+".copy");
             if (!doesFileExist(s3, bucketName, fileName+".copy") ) {
