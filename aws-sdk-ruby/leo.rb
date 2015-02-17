@@ -114,6 +114,14 @@ begin
     puts "File Content type is :" + bucket.objects[FileName].content_type + "\n\n"
   end
 
+  # GET non-existing object
+  begin
+    bucket.objects[FileName + ".nonexist"].read
+    raise "The file must NOT be exist\n"
+  rescue AWS::S3::Errors::NoSuchKey
+    puts "Get non-existing object Successfully..\n"
+  end
+
   # Copy object
   bucket.objects[FileName + ".copy"].copy_from(FileName)
   if !bucket.objects[FileName + ".copy"].exists?
