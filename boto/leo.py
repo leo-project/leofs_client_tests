@@ -77,6 +77,15 @@ try:
     else:
         print "File Content type is :", obj.content_type
 
+    # GET non-existing object
+    nonexist_obj = bucket.get_key(FILE_NAME + ".nonexist")
+    try:
+        print "Non-existing files:", nonexist_obj.read()
+        raise "File must NOT be exist\n"
+    except Exception, not_found:
+        print "Get non-existing object successfully\n"
+    print "Get non-existing object Test [End]\n"
+
     # Show Objects
     print"--------------------------------List Objects-----------------------------------"
     for key in bucket.list():
