@@ -215,6 +215,36 @@ public class LeoFSSample {
             }
             System.out.println("DELETE multi layered directories Test [End]\n");
 
+            // Listing objects across over mutiple pages
+            System.out.println("Listing Objects Test [Start]");
+            baseDir = "images/";
+            int expectedCount = 1500;
+            int actualCount = 0;
+            List<S3ObjectSummary> keyList = new ArrayList<S3ObjectSummary>();
+            for (int i = 0; i < expectedCount; i++) {
+                s3.putObject(new PutObjectRequest(bucketName, baseDir + "file." + i, createFile()));
+            }
+            ObjectListing objectListing3 =
+                s3.listObjects(new ListObjectsRequest().withBucketName(bucketName).withPrefix(baseDir));
+            System.out.println("-----List objects----");
+            keyList.addAll(objectListing3.getObjectSummaries());
+            while (objectListing3.isTruncated()) {
+                objectListing3.setBucketName(bucketName);
+                objectListing3 = s3.listNextBatchOfObjects(objectListing3);
+                keyList.addAll(objectListing3.getObjectSummaries());
+            }
+            for (S3ObjectSummary objectSummary : keyList) {
+                actualCount++;
+                System.out.println(objectSummary.getKey() + " \t Size:" + objectSummary.getSize()
+                                                              + " \t Count:" + actualCount);
+            }
+            if (actualCount != expectedCount) {
+                throw new IOException("The number of objects returned by listing objects is different." +
+                                    " expected:" + expectedCount +
+                                    " actual:"   + actualCount);
+            }
+            System.out.println("Listing Objects Test [End]\n");
+
             // GET-PUT ACL
             System.out.println("Bucket ACL Test [Start]");
             System.out.println("#####Default ACL#####");
