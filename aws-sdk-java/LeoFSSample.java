@@ -24,6 +24,8 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import com.amazonaws.services.s3.model.DeleteObjectsResult.DeletedObject;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
@@ -244,6 +246,27 @@ public class LeoFSSample {
                                     " actual:"   + actualCount);
             }
             System.out.println("Listing Objects Test [End]\n");
+
+            // Multiple Delete Objects
+            System.out.println("Multiple Delete Objects Test [Start]");
+            List<String> delKeyList = new ArrayList<String>();
+            String[] keyArrays = new String[1];
+            for (int i = 0; i < 10; i++) {
+                String delKey = "delete_test." + i;
+                delKeyList.add(delKey);
+                s3.putObject(new PutObjectRequest(bucketName, delKey, createFile()));
+            }
+
+            DeleteObjectsRequest delObjsReq = new DeleteObjectsRequest(bucketName).withKeys(delKeyList.toArray(keyArrays));
+            DeleteObjectsResult delObjsRes = s3.deleteObjects(delObjsReq);
+            List<DeleteObjectsResult.DeletedObject> delObjList = delObjsRes.getDeletedObjects();
+            System.out.println(" expected:" + delKeyList.size() + " actual:" +  delObjList.size() + "\n");
+            if (delObjList.size() != delKeyList.size()) {
+                throw new IOException("The number of deleted objects is less than the number of delete requests." +
+                                    " expected:" + delKeyList.size() +
+                                    " actual:"   + delObjList.size());
+            }
+            System.out.println("Multiple Delete Objects Test [End]\n");
 
             // GET-PUT ACL
             System.out.println("Bucket ACL Test [Start]");
