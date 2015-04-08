@@ -1,5 +1,5 @@
 ## This code supports "aws-sdk v1.9.5"
-require "aws-sdk"
+require "aws-sdk-v1"
 require "content_type"
 
 # set your s3 key and variable
@@ -219,6 +219,16 @@ begin
   else
     puts "\nMulti layered directories Deleted Successfully\n"
   end
+
+  # Delete Multiple Objects
+  to_delete = []
+  for fname in 1..10 do
+    target = bucket.objects[BaseDir2 + fname.to_s]
+    target.write(file: file_path, content_type: fileObject.content_type)
+    to_delete << target
+  end
+  bucket.objects.delete(to_delete)
+  puts "\nDelete Multiple Objects Successfully\n"
 
   # Get-Put ACL
   puts "\n#####Default ACL#####"
