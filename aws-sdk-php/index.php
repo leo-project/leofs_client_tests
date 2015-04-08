@@ -212,6 +212,22 @@ try {
     }
     print "Deleting multi layered directories [End]\n\n";
 
+    // Delete Multiple Objects
+    $deleteTargetObjects = array();
+    print "Delete Multiple Objects [Start]\n";
+    for ($i = 0; $i < 10; $i++) {
+        $deleteTargetObjects[] = array("Key" => $i."file");
+        $client->putObject(array("Bucket" => $bucket_name, "Key" => $i."file", "Body" => fopen($file_path, "r")));
+    }
+    $resMultiDelete = $client->deleteObjects(array(
+        "Bucket" => $bucket_name,
+        "Objects" => $deleteTargetObjects
+    ));
+    if (count($deleteTargetObjects) != count($resMultiDelete["Deleted"])) {
+        throw new Exception( "Delete Multiple Objects Failed");
+    }
+    print "Delete Multiple Objects [End]\n";
+
     // GET-PUT ACL
     print "Bucket ACL Test [Start]\n";
     print "#####Default ACL#####\n";
