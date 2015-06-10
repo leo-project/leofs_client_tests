@@ -13,7 +13,8 @@ main(_Args) ->
     ok = code:add_paths(["ebin",
                          "deps/erlcloud/ebin",
                          "deps/jsx/ebin",
-                         "deps/meck/ebin"]),
+                         "deps/meck/ebin",
+                         "deps/lhttpc/ebin"]),
     erlcloud:start(),
     Conf = erlcloud_s3:new(?AWS_ACCESS_KEY, 
                            ?AWS_SECRET_KEY,
@@ -42,6 +43,14 @@ main(_Args) ->
             error:{aws_error,{http_error,404,_,_}} ->
                 io:format("[debug]404 not found object~n")
         end,
+        
+
+        % Range Get object
+        io:format("[debug]Range Get~n",[]),
+        ObjRange = erlcloud_s3:get_object("erlang", "test-key", [{range, "bytes=1-4"}], Conf2),
+        io:format("[debug]~p~n", [ObjRange]),
+        <<"alue">> = proplists:get_value(content, ObjRange),
+
         % GET an object metadata from the LeoFS
         Meta = erlcloud_s3:get_object_metadata("erlang", "test-key", Conf2),
         io:format("[debug]metadata:~p~n", [Meta]),

@@ -4,6 +4,7 @@ all: deps compile exec
 
 deps:
 	@./rebar get-deps
+	cp erlcloud_s3.erl deps/erlcloud/src 
 
 compile:
 	@./rebar compile
