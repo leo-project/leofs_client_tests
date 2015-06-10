@@ -164,6 +164,18 @@ public class LeoFSSample {
             }
             System.out.println("GET non-existing Object Test [End]\n");
 
+            // Range Request from LeoFS
+            System.out.println("Range Get Object Test [Start]");
+            S3Object object_range = s3.getObject(new GetObjectRequest(bucketName, fileName).withRange(1,4));
+            BufferedReader reader_range = new BufferedReader(new InputStreamReader(object_range.getObjectContent()));
+            String line_range = reader_range.readLine();
+            if (!line_range.equals("his ")) {
+                System.out.println(line_range);
+                throw new IOException("Range Get Result does NOT match");
+            }
+            System.out.println("Range Get Object Test [End]\n");
+
+
             // File copy bucket internally
             System.out.println("COPY Object Test [Start]");
             s3.copyObject( bucketName, file.getName(), bucketName, fileName+".copy");
@@ -433,4 +445,5 @@ public class LeoFSSample {
         }
         return sb.toString();
     }
+
 }
