@@ -146,6 +146,14 @@ try {
     print "File Successfully downloaded\n";
     print "Download Object Test [End]\n\n";
 
+    // Range Get Object
+    print "Range Get Object Test [Start]\n";
+    $object_range = $client->getObject(array("Bucket" => $bucket_name, "Key" => "testFile", "Range" => 'bytes=1-4'));
+    if ($object_range['Body'] != "his ") {
+        throw new Exception("Range Get Result does NOT match\n");
+    }
+    print "Range Get Object Test [End]\n\n";
+
     // COPY Object
     print "Copy Object Test [Start]\n";
     $result = $client->copyObject(array("Bucket" => $bucket_name, "CopySource" => "/{$bucket_name}/".$file_name, "Key" => $file_name.".copy"));
