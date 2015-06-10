@@ -86,6 +86,17 @@ try:
         print "Get non-existing object successfully\n"
     print "Get non-existing object Test [End]\n"
 
+    # Range Get object
+    print "Range Get Object Test [Start]";
+    rangeDict = {'Range': 'bytes=1-4'}
+    obj_range = bucket.get_key(FILE_NAME)
+    resp = obj_range.get_contents_as_string(headers = rangeDict)
+    if resp != "his ":
+        raise "Range Get Result does NOT match\n"
+    else:
+        print "Range Get Succeeded\n"
+    print "Range Get Object Test [End]\n";
+
     # Show Objects
     print"--------------------------------List Objects-----------------------------------"
     for key in bucket.list():
