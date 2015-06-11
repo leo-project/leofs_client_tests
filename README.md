@@ -37,6 +37,7 @@ $ ruby leo2.rb
 ```bash
 $ sudo pip install boto
 $ sudo pip install python-magic
+$ sudo pip install filechunkio
 ```
 
 #### Execute the test-case
