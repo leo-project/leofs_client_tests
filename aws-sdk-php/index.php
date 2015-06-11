@@ -10,6 +10,7 @@ use Aws\S3\Exception\NoSuchKeyException;
 ini_set("memory_set",-1);
 $bucket_name="test";
 $file_name="testFile";
+$large_obj_size=52428800;
 
 /* key ==> replace your Access_ID, secret ==> replace your secret_key, base_
 url ==> your leofs service address */
@@ -72,12 +73,40 @@ try {
          throw new Exception("Multi-Part File could not Uploaded Successfully");
     }
     print "Multi-Part File Uploaded Successfully\n";
+    
+    if (!file_exists($file_name.".large")) {
+       $large_obj = openssl_random_pseudo_bytes($large_obj_size); 
+       file_put_contents($file_name.".large", $large_obj);
+    }
+
+    // Put Single-Part Large Object
+    print "Put Single-Part Large Object\n";
+    $client->putObject(array("Bucket" => $bucket_name, "Key" => $file_name.".large.one", "Body" => fopen($file_name.".large", "r")));
+    if(!$client->doesObjectExist($bucket_name, $file_name.".large.one")) {
+         throw new Exception("Single Part Large Object Upload Failed");
+    }
+    print "Single Part Large Object Upload Suceeded\n";
+
+    // Put Multi-Part Large Object
+    print "Put Multi-Part Large Object\n";
+    $uploader_large = UploadBuilder::newInstance()
+    ->setClient($client)
+    ->setSource($file_name.".large")
+    ->setBucket($bucket_name)
+    ->setKey($file_name.".large.part")
+    ->setOption("CacheControl", "max-age=3600")
+    ->build();
+    $uploader_large->upload();
+    if(!$client->doesObjectExist($bucket_name, $file_name.".large.part")) {
+         throw new Exception("Multi Part Large Object Upload Failed");
+    }
+    print "Multi Part Large Object Upload Suceeded\n";
 
     // List Objects
     print "----------------------List Objects----------------------\n";
     $iterator = $client->getIterator("ListObjects", array("Bucket" => $bucket_name));
     foreach($iterator as $object) {
-        if(!$file_size == $object["Size"]){
+        if(!($file_size == $object["Size"] || $large_obj_size == $object["Size"])){
             throw new Exception("Content length is changed for :".$object["Key"]);
         }
         print $object["Key"]."\t".$object["Size"]."\t".$object["LastModified"]."\n";
@@ -148,8 +177,20 @@ try {
 
     // Range Get Object
     print "Range Get Object Test [Start]\n";
+    print "Range Get in Small Object\n";
     $object_range = $client->getObject(array("Bucket" => $bucket_name, "Key" => "testFile", "Range" => 'bytes=1-4'));
     if ($object_range['Body'] != "his ") {
+        throw new Exception("Range Get Result does NOT match\n");
+    }
+    $base_arr = file_get_contents($file_name.".large", NULL, NULL, 1048576, 10485760 - 1048576 + 1);
+    print "Range Get in Single Part Large Object\n";
+    $object_range1 = $client->getObject(array("Bucket" => $bucket_name, "Key" => "testFile.large.one", "Range" => 'bytes=1048576-10485760'));
+    if ($object_range1['Body'] != $base_arr) {
+        throw new Exception("Range Get Result does NOT match\n");
+    }
+    print "Range Get in Multi Part Large Object\n";
+    $object_range2 = $client->getObject(array("Bucket" => $bucket_name, "Key" => "testFile.large.part", "Range" => 'bytes=1048576-10485760'));
+    if ($object_range2['Body'] != $base_arr) {
         throw new Exception("Range Get Result does NOT match\n");
     }
     print "Range Get Object Test [End]\n\n";
@@ -179,6 +220,8 @@ try {
     $iterator = $client->getIterator("ListObjects", array("Bucket" => $bucket_name));
     foreach($iterator as $object) {
         $client->deleteObject(array( "Bucket" => $bucket_name, "Key" => $object["Key"]));
+    }
+    foreach($iterator as $object) {
         if($client->doesObjectExist($bucket_name, $object["Key"])){
             throw new Exception( $object["Key"]."\tFile could not Deleted Successfully");
         }
