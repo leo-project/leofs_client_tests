@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.RandomAccessFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -59,6 +60,7 @@ public class LeoFSSample {
         final String fileName = "testFile";
 
         final Integer largeObjSize = 52428800;
+        final String largeFilePath = "../temp_data/testFile.large";
         try {
             // Create a bucket
             System.out.println("Bucket Creation Test [Start]");
@@ -98,7 +100,16 @@ public class LeoFSSample {
             }
 
             byte[] largeObj = new byte[largeObjSize];
-            new Random().nextBytes(largeObj);
+            File largeFile = new File(largeFilePath);
+            if (largeFile.exists()) {
+                RandomAccessFile largeFileRA = new RandomAccessFile(largeFilePath, "r");
+                largeFileRA.readFully(largeObj);
+            } else {
+                new Random().nextBytes(largeObj);
+                FileOutputStream out = new FileOutputStream(largeFilePath);
+                out.write(largeObj);
+                out.close();
+            }
             InputStream largeObjStream = new ByteArrayInputStream(largeObj);
             ObjectMetadata largeObjMeta = new ObjectMetadata();
             largeObjMeta.setContentLength(largeObjSize);
