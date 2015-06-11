@@ -5,11 +5,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ByteArrayInputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.Arrays;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -36,6 +39,8 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
+
+import org.apache.commons.io.IOUtils;
 public class LeoFSSample {
     public static void main(String[] args) throws IOException {
         /* ---------------------------------------------------------
@@ -52,6 +57,8 @@ public class LeoFSSample {
         final String bucketName = "test";
         final String key = "test-key";
         final String fileName = "testFile";
+
+        final Integer largeObjSize = 52428800;
         try {
             // Create a bucket
             System.out.println("Bucket Creation Test [Start]");
@@ -90,6 +97,20 @@ public class LeoFSSample {
                 System.out.println("Single Part File Uploaded Successfully");
             }
 
+            byte[] largeObj = new byte[largeObjSize];
+            new Random().nextBytes(largeObj);
+            InputStream largeObjStream = new ByteArrayInputStream(largeObj);
+            ObjectMetadata largeObjMeta = new ObjectMetadata();
+            largeObjMeta.setContentLength(largeObjSize);
+
+            System.out.println("Uploading Single Part Large Object to S3");
+            s3.putObject(new PutObjectRequest(bucketName, fileName + ".large.one", largeObjStream, largeObjMeta)); 
+            if (!doesFileExist(s3, bucketName, fileName + ".large.one")) {
+                throw new IOException("Single Part Large Object Upload Failed");
+            } else {
+                System.out.println("Single Part Large Object Upload Suceeded");
+            }
+
             /* Multipart upload allows you to upload a single object as a set of parts.Each part is a contiguous
             portion of the object's data. You can upload these object parts independently and in any order. 
             If transmission of any part fails, you can retransmit that part without affecting other parts. 
@@ -101,14 +122,6 @@ public class LeoFSSample {
             // File Upload to LeoFS using multipart upload method
             TransferManager tx = new TransferManager(s3);
             Upload upload = tx.upload(bucketName, file.getName(), file); 
-            System.out.println("Transfer: " + upload.getDescription() + "\t" + "State" + upload.getState());
-
-            // You can poll your transfer's status to check its progress
-            while ( upload.isDone() == false ) {
-                System.out.println(" - Progress: " + upload.getProgress().getBytesTransferred() 
-                                      + "Byte \t" + upload.getProgress().getPercentTransferred() + "%" );
-                Thread.sleep(100);
-            } 
             upload.waitForCompletion();
             tx.shutdownNow(Boolean.FALSE.booleanValue());
             if ( !doesFileExist(s3, bucketName, fileName) ) {
@@ -116,6 +129,28 @@ public class LeoFSSample {
             } else {
                 System.out.println("File Uploaded Successfully");
             }
+
+            System.out.println("Uploading Multi-part Large Object to S3");
+            TransferManager txLarge = new TransferManager(s3);
+            largeObjStream.reset();
+
+            Upload uploadLarge = txLarge.upload(bucketName, fileName + ".large.part", largeObjStream, largeObjMeta);
+            System.out.println("Transfer: " + uploadLarge.getDescription() + "\t" + "State" + uploadLarge.getState());
+
+            // You can poll your transfer's status to check its progress
+            while ( uploadLarge.isDone() == false ) {
+                System.out.println(" - Progress: " + uploadLarge.getProgress().getBytesTransferred() 
+                                      + "Byte \t" + uploadLarge.getProgress().getPercentTransferred() + "%" );
+                Thread.sleep(100);
+            } 
+            uploadLarge.waitForCompletion();
+            txLarge.shutdownNow(Boolean.FALSE.booleanValue());
+            if ( !doesFileExist(s3, bucketName, fileName + ".large.part") ) {
+                throw new IOException("Multi-part Large File Upload Failed");
+            } else {
+                System.out.println("Multi-part Large File Upload Suceeded");
+            }
+
             System.out.println("Object Upload Test [End] \n");
 
             /* Files in Amazon S3 & LeoFS are called "objects" and are stored in buckets. A specific object is
@@ -166,15 +201,37 @@ public class LeoFSSample {
 
             // Range Request from LeoFS
             System.out.println("Range Get Object Test [Start]");
-            S3Object object_range = s3.getObject(new GetObjectRequest(bucketName, fileName).withRange(1,4));
-            BufferedReader reader_range = new BufferedReader(new InputStreamReader(object_range.getObjectContent()));
-            String line_range = reader_range.readLine();
-            if (!line_range.equals("his ")) {
-                System.out.println(line_range);
+            
+            System.out.println("Range Get in Small Object");
+            S3Object objectRange = s3.getObject(new GetObjectRequest(bucketName, fileName).withRange(1,4));
+            BufferedReader readerRange = new BufferedReader(new InputStreamReader(objectRange.getObjectContent()));
+            String lineRange = readerRange.readLine();
+            if (!lineRange.equals("his ")) {
+                System.out.println(lineRange);
                 throw new IOException("Range Get Result does NOT match");
             }
-            System.out.println("Range Get Object Test [End]\n");
 
+            byte[] baseArr = Arrays.copyOfRange(largeObj, 1048576, 10485760 + 1);
+
+            System.out.println("Range Get in Single Part Large Object");
+            S3Object objectRangeLarge1 = s3.getObject(new GetObjectRequest(bucketName, fileName + ".large.one").withRange(1048576, 10485760));
+            byte[] rangeBytes1 = IOUtils.toByteArray(objectRangeLarge1.getObjectContent());
+            if (!Arrays.equals(baseArr, rangeBytes1)) {
+                System.out.println("baseArr Size: " + baseArr.length);
+                System.out.println("rangeBytes Size: " + rangeBytes1.length);
+                throw new IOException("Range Get Result doe NOT match");
+            }
+
+            System.out.println("Range Get in Multi Part Large Object");
+            S3Object objectRangeLarge2 = s3.getObject(new GetObjectRequest(bucketName, fileName + ".large.part").withRange(1048576, 10485760));
+            byte[] rangeBytes2 = IOUtils.toByteArray(objectRangeLarge2.getObjectContent());
+            if (!Arrays.equals(baseArr, rangeBytes2)) {
+                System.out.println("baseArr Size: " + baseArr.length);
+                System.out.println("rangeBytes Size: " + rangeBytes2.length);
+                throw new IOException("Range Get Result doe NOT match");
+            }
+
+            System.out.println("Range Get Object Test [End]\n");
 
             // File copy bucket internally
             System.out.println("COPY Object Test [Start]");
@@ -195,11 +252,13 @@ public class LeoFSSample {
 
             // DELETE an object from the LeoFS
             System.out.println("DELETE Object Test [Start]");
-            System.out.println("-----List objects----");
             for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() ) {
                 s3.deleteObject(bucketName, objectSummary.getKey());
+            }
+            System.out.println("-----List objects----");
+            for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() ) {
                 if ( doesFileExist(s3,bucketName,objectSummary.getKey()) ) {
-                    throw new IOException("Object Not Deleted");
+                    throw new IOException("Object Not Deleted: " + objectSummary.getKey());
                 } else {
                     System.out.println(objectSummary.getKey() + " \t\t Deleted Successfully");
                 }
