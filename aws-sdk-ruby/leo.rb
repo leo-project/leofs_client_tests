@@ -10,6 +10,8 @@ SecretAccessKey = "802562235"
 FileName = "testFile s"
 ChunkSize = 5 * 1024 * 1024  ## 5 MB chunk size
 Bucket = "test" + rand(99999).to_s  ## Dynamic BucketName
+LargeObjSize = 5242880
+LargeFilePath = "../temp_data/testFile.large"
 
 class LeoFSHandler < AWS::Core::Http::NetHttpHandler
     def handle(request, response)
@@ -69,12 +71,39 @@ begin
     end
     puts "File Uploaded Successfully\n\n"
 
+    if !File.exist?(LargeFilePath)
+        File.open(LargeFilePath, "wb") do |f|
+            f.write(Random.new.bytes(LargeObjSize))
+        end
+    end
+
+    # Put Single-Part Large Object
+    puts "Uploading Single Part Large Object"
+    largeFileObject = open(LargeFilePath)
+    obj = bucket.objects[FileName + ".large.one"].write(file: LargeFilePath, content_type: largeFileObject.content_type) 
+
+    # Put Multi-Part Large Object
+    puts "Uploading Multi Part Large Object"
+    largeFileObject.rewind
+    uploading_object = bucket.objects[FileName + ".large.part"]
+    counter = largeFileObject.size / ChunkSize
+    uploading_object.multipart_upload(:content_type=> largeFileObject.content_type.to_s) do |upload|
+        while !largeFileObject.eof?
+            puts " #{upload.id} \t\t #{counter} "
+            counter -= 1
+            upload.add_part(largeFileObject.read ChunkSize)
+            p("Aborted") if upload.aborted?
+        end
+    end
+
     # List objects in the bucket
     puts "----------List Files---------\n"
     bucket.objects.with_prefix("").each do |obj|
         puts obj
         if !fileObject.size.eql? obj.content_length
-            raise " Content length is changed for : #{obj.key}"
+            if !largeFileObject.size.eql? obj.content_length
+                raise " Content length is changed for : #{obj.key}"
+            end
         end
         puts "#{obj.key} \t #{obj.content_length}"
     end
@@ -132,6 +161,30 @@ begin
     end
     puts "\n"
 
+    baseArr = []
+    open LargeFilePath, 'r' do |f|
+        f.seek 1048576
+        baseArr = f.read (10485760 - 1048576 + 1)
+    end
+
+    puts "---Range Get Single-Part---"
+    resp = bucket.objects[FileName + ".large.one"].read(range: "bytes=1048576-10485760")
+    if resp != baseArr
+        raise "Range Get Result does NOT match"
+    else
+        puts "Range Get Succeeded"
+    end
+    puts "\n"
+
+    puts "---Range Get Multi-Part---"
+    resp = bucket.objects[FileName + ".large.part"].read(range: "bytes=1048576-10485760")
+    if resp != baseArr
+        raise "Range Get Result does NOT match"
+    else
+        puts "Range Get Succeeded"
+    end
+    puts "\n"
+
     # Copy object
     bucket.objects[FileName + ".copy"].copy_from(FileName)
     if !bucket.objects[FileName + ".copy"].exists?
@@ -143,7 +196,9 @@ begin
     puts "----------List Files---------\n"
     bucket.objects.with_prefix("").each do |obj|
         if !fileObject.size.eql? obj.content_length
-            raise " Content length is changed for : #{obj.key}"
+            if !largeFileObject.size.eql? obj.content_length
+                raise " Content length is changed for : #{obj.key}"
+            end
         end
         puts "#{obj.key} \t #{obj.content_length}"
     end
@@ -159,7 +214,9 @@ begin
     puts "----------List Files---------\n"
     bucket.objects.with_prefix("").each do |obj|
         if !fileObject.size.eql? obj.content_length
-            raise " Content length is changed for : #{obj.key}"
+            if !largeFileObject.size.eql? obj.content_length
+                raise " Content length is changed for : #{obj.key}"
+            end
         end
         puts "#{obj.key} \t #{obj.content_length}"
     end
@@ -175,7 +232,9 @@ begin
     puts "----------List Files---------\n"
     bucket.objects.with_prefix("").each do |obj|
         if !fileObject.size.eql? obj.content_length
-            raise " Content length is changed for : #{obj.key}"
+            if !largeFileObject.size.eql? obj.content_length
+                raise " Content length is changed for : #{obj.key}"
+            end
         end
         puts "#{obj.key} \t #{obj.content_length}"
     end
@@ -198,6 +257,9 @@ begin
     puts "--------------------Delete Files--------------------\n"
     bucket.objects.with_prefix("").each do |obj|
         obj.delete
+    end
+
+    bucket.objects.with_prefix("").each do |obj|
         if obj.exists?
             raise "Object is not Deleted Successfully\n"
         end
@@ -208,7 +270,6 @@ begin
             puts "#{obj.key} \t File Deleted Successfully..\n"
             next
         end
-        raise "Object is not Deleted Successfully\n"
     end
 
     # List multi layered directories 
@@ -309,8 +370,8 @@ rescue
     exit(-1)
 ensure
     # Bucket Delete
-    bucket = s3.buckets[Bucket]
+#    bucket = s3.buckets[Bucket]
     #bucket.clear!  #clear the versions only
-    bucket.delete
+#    bucket.delete
     puts "Bucket deleted Successfully\n"
 end

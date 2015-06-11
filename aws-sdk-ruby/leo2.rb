@@ -11,6 +11,8 @@ SecretAccessKey = "802562235"
 Filename = "testFile s"
 ChunkSize = 5 * 1024 * 1024 ## 5 MB chunk size
 Bucket = "test" + rand(99999).to_s ## Dynamic BucketName
+LargeObjSize = 52428800
+LargeFilePath = "../temp_data/testFile.large"
 
 Aws.config = {
     access_key_id: AccessKeyId,
@@ -59,14 +61,43 @@ begin
                                           multipart_upload: {parts: parts})
     puts "File Uploaded Successfully\n\n"
 
+    if !File.exist?(LargeFilePath)
+        File.open(LargeFilePath, "wb") do |f|
+            f.write(Random.new.bytes(LargeObjSize))
+        end
+    end
+
+    puts "Uploading Single Part Large Object"
+    # Put Single-Part Large Object
+    largeFileObject = open(LargeFilePath)
+    s3.put_object(bucket: Bucket, body: largeFileObject, key: Filename + ".large.one", content_type: largeFileObject.content_type)
+
+    # Put Multi-Part Large Object
+    puts "Uploading Multi Part Large Object"
+    largeFileObject.rewind
+    resp1 = s3.create_multipart_upload(bucket: Bucket, key: Filename + ".large.part", content_type: largeFileObject.content_type)
+    counter = 0
+    parts = []
+    while !largeFileObject.eof?
+        counter += 1
+        puts "Chunk number: #{counter}"
+        body = largeFileObject.read ChunkSize
+        resp2 = s3.upload_part(body: body, bucket: Bucket, key: Filename + ".large.part", part_number: counter, upload_id: resp1.upload_id)
+        parts.push({etag: resp2.etag.gsub("\"", ""), part_number: counter.to_i})
+    end
+    status = s3.complete_multipart_upload(bucket: Bucket, key: Filename + ".large.part", upload_id: resp1.upload_id,
+                                          multipart_upload: {parts: parts})
+
     # List objects in the bucket
     puts "----------List Files---------"
     resp = s3.list_objects(bucket: Bucket)
     resp.contents.each do |obj|
-        if !fileObject.size.eql? obj.size
-            raise " Content length is changed for : #{obj.key}"
-        end
         puts "key: #{obj.key}\tsize: #{obj.size}\t#{obj.etag}"
+        if !fileObject.size.eql? obj.size 
+            if !largeFileObject.size.eql? obj.size
+                raise " Content length is changed for : #{obj.key}"
+            end
+        end
     end
     puts "\n"
 
@@ -127,6 +158,31 @@ begin
     end
     puts "\n"
 
+    baseArr = []
+    open LargeFilePath, 'r' do |f|
+        f.seek 1048576
+        baseArr = f.read (10485760 - 1048576 + 1)
+    end
+
+    puts "---Range Get Single-Part---"
+    resp = s3.get_object(bucket: Bucket, key: Filename+".large.one", range: "bytes=1048576-10485760")
+    if resp.body.read != baseArr
+        raise "Range Get Result does NOT match"
+    else
+        puts "Range Get Succeeded"
+    end
+    puts "\n"
+
+    puts "---Range Get Multi-Part---"
+    resp = s3.get_object(bucket: Bucket, key: Filename+".large.part", range: "bytes=1048576-10485760")
+    if resp.body.read != baseArr
+        raise "Range Get Result does NOT match"
+    else
+        puts "Range Get Succeeded"
+    end
+    puts "\n"
+
+    # Copy object
     # Copy object
     puts "----------Copy---------"
     resp = s3.copy_object(bucket: Bucket, key: Filename + ".copy", copy_source: Bucket + "/" + Filename)
