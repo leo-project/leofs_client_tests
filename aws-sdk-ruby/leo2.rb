@@ -166,7 +166,9 @@ begin
 
     puts "---Range Get Single-Part---"
     resp = s3.get_object(bucket: Bucket, key: Filename+".large.one", range: "bytes=1048576-10485760")
-    if resp.body.read != baseArr
+    getBin = resp.body.read
+    if getBin != baseArr
+        puts getBin.size
         raise "Range Get Result does NOT match"
     else
         puts "Range Get Succeeded"
@@ -175,7 +177,9 @@ begin
 
     puts "---Range Get Multi-Part---"
     resp = s3.get_object(bucket: Bucket, key: Filename+".large.part", range: "bytes=1048576-10485760")
-    if resp.body.read != baseArr
+    getBin = resp.body.read
+    if getBin != baseArr
+        puts getBin.size
         raise "Range Get Result does NOT match"
     else
         puts "Range Get Succeeded"
