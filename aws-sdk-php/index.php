@@ -25,10 +25,26 @@ $client = S3Client::factory(array(
 ));
 
 try {
+    // Head bucket to non existing
+    print "Head Bucket Test(no exist) [Start]\n";
+    $result = $client->doesBucketExist($bucket_name, false);
+    if ($result) {
+         throw new Exception("Head Bucket Test(no exist) Failed");
+    }
+    print "Head Bucket(no exist) Successfully \n";
+
     // Create bucket
     print "Bucket Creation Test [Start]\n";
     $result = $client->createBucket(array("Bucket" => $bucket_name));
     print "Bucket Created Successfully \n";
+
+    // Head bucket to existing
+    print "Head Bucket Test [Start]\n";
+    $result = $client->doesBucketExist($bucket_name, false);
+    if (!$result) {
+         throw new Exception("Head Bucket Test Failed");
+    }
+    print "Head Bucket Successfully \n";
 
     // Show buckets
     print "--------------Bucket List---------\n";
