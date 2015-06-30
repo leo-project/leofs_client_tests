@@ -69,6 +69,22 @@ $ cd aws-sdk-php
 $ php index.php
 ```
 
+### GO - aws-sdk-go
+#### Install the libraries
+
+```bash
+$ mkdir $HOME/go
+$ get github.com/aws/aws-sdk-go/service/s3
+$ export GOPATH=$HOME/go
+```
+
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-go
+$ go run leo.go
+```
+
 ### Erlang - erlcloud
 #### Install the libraries
 
