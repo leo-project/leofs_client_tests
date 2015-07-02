@@ -10,7 +10,7 @@ SecretAccessKey = "802562235"
 FileName = "testFile s"
 ChunkSize = 5 * 1024 * 1024  ## 5 MB chunk size
 Bucket = "test" + rand(99999).to_s  ## Dynamic BucketName
-LargeObjSize = 5242880
+LargeObjSize = 52428800
 LargeFilePath = "../temp_data/testFile.large"
 
 class LeoFSHandler < AWS::Core::Http::NetHttpHandler
