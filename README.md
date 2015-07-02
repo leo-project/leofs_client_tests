@@ -73,8 +73,9 @@ $ php index.php
 #### Install the libraries
 
 ```bash
+$ sudo apt-get install golang
 $ mkdir $HOME/go
-$ get github.com/aws/aws-sdk-go/service/s3
+$ go get github.com/aws/aws-sdk-go/service/s3
 $ export GOPATH=$HOME/go
 ```
 
