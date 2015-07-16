@@ -308,6 +308,10 @@ public class LeoFSSample {
             for (int i = 0; i < expectedCount; i++) {
                 s3.putObject(new PutObjectRequest(bucketName, baseDir + "file." + i, createFile()));
             }
+
+            // For 1.4's async operations to handle directory structure
+            Thread.sleep(1000);
+
             ObjectListing objectListing3 =
                 s3.listObjects(new ListObjectsRequest().withBucketName(bucketName).withPrefix(baseDir));
             System.out.println("-----List objects----");
