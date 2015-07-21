@@ -5,11 +5,12 @@
     <path id="aws.java.sdk.classpath">
         <fileset dir="./third-party" includes="**/*.jar"/>
         <fileset dir="./lib" includes="**/*.jar"/>
+        <fileset dir="./extras" includes="**/*.jar"/>
         <pathelement location="."/>
     </path>
 
     <target name="run">
         <javac srcdir="." destdir="." classpathref="aws.java.sdk.classpath"/>
-        <java classname="LeoFSSample" classpathref="aws.java.sdk.classpath" fork="true"/>
+        <java classname="LeoFSTest" classpathref="aws.java.sdk.classpath" fork="true"/>
     </target>
 </project>
