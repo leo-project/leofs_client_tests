@@ -75,6 +75,7 @@ try {
 
     // Multiple Page List Object Test
     putDummyObjects(BUCKET, "list/", 35, SMALL_TEST_F);
+    sleep(3);
     pageListBucket(BUCKET, "list/", 35, 10);
 
     // Multiple Delete
