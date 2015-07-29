@@ -94,10 +94,12 @@ $ python LeoFSTest.py v2
 
 ### Erlang - erlcloud
 #### Install the libraries
+```bash
+$ cd erlcloud
+$ make
+```
 
 #### Execute the test-case
-
 ```bash
-$ make 
+$ ./LeoFSTest.erl
 ```
-### s3cmd
