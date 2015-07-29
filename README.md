@@ -1,5 +1,50 @@
 ## LeoFS Client TEST
 
+### Java - aws-sdk-java
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-java
+$ ant -Dsignver=v4
+or
+$ ant -Dsignver=v2
+```
+
+### PHP - aws-sdk-php
+#### Install the libraries
+
+```bash
+$ cd aws-sdk-php
+$ curl -sS https://getcomposer.org/installer | php
+$ php composer.phar install
+```
+
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-php
+$ php LeoFSTest.php v4
+or
+$ php LeoFSTest.php v2
+```
+
+### GO - aws-sdk-go
+#### Install the libraries
+
+```bash
+$ sudo apt-get install golang
+$ mkdir $HOME/go
+$ go get github.com/aws/aws-sdk-go/service/s3
+$ export GOPATH=$HOME/go
+```
+
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-go
+$ go run LeoFSTest.go
+```
+
 ### Ruby - aws-sdk-ruby
 #### Install the libraries
 
@@ -19,7 +64,6 @@ $ sudo apt-get install ruby-dev
 
 ```bash
 $ sudo gem install aws-sdk
-$ sudo gem install aws-sdk-v1
 $ sudo gem install content_type
 ```
 
@@ -27,8 +71,9 @@ $ sudo gem install content_type
 
 ```bash
 $ cd aws-sdk-ruby
-$ ruby leo.rb
-$ ruby leo2.rb
+$ ruby LeoFSTest.rb v4
+or
+$ ruby LeoFSTest.rb v2
 ``` 
 
 ### Python - boto
@@ -36,37 +81,15 @@ $ ruby leo2.rb
 
 ```bash
 $ sudo pip install boto
-$ sudo pip install python-magic
 $ sudo pip install filechunkio
 ```
 
 #### Execute the test-case
 
 ```bash
-$ python leo.py
-```
-
-### Java - aws-sdk-java
-#### Execute the test-case
-
-```bash
-$ cd aws-sdk-java
-$ ant
-```
-
-### PHP - aws-sdk-php
-#### Install the libraries
-
-```bash
-$ curl -sS https://getcomposer.org/installer | php
-$ php composer.phar install
-```
-
-#### Execute the test-case
-
-```bash
-$ cd aws-sdk-php
-$ php index.php
+$ python LeoFSTest.py v4
+or
+$ python LeoFSTest.py v2
 ```
 
 ### Erlang - erlcloud

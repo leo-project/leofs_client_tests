@@ -3,5 +3,5 @@
 ##     - Ubuntu/Debian: sudo yum install libmagic-devel
 ##     - CentOS/Fedora/RHEL: 
 source 'https://rubygems.org'
-gem 'aws-sdk', '~> 1'
+gem 'aws-sdk', '~> 2'
 gem 'content_type'
