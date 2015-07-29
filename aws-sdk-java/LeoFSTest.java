@@ -111,6 +111,7 @@ public class LeoFSTest {
 
         // Multiple Page List Object Test
         putDummyObjects(bucket, "list/", 35, smallTestF);
+        Thread.sleep(3000); // Need to wait for syncing directory metadata
         pageListBucket(bucket, "list/", 35, 10);
 
         // Multiple Delete
