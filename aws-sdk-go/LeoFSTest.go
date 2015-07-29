@@ -327,12 +327,12 @@ func putDummyObjects(bucketName, prefix string, total int, holder string) {
     bucketStr := aws.String(bucketName)
     for i := 0; i < total; i++ {
         reader, _ := os.Open(holder)
+        defer reader.Close()
         svc.PutObject(&s3.PutObjectInput{
             Bucket  : bucketStr,
             Key     : aws.String(fmt.Sprintf("%s%d", prefix, i)),
             Body    : reader,
         })
-        reader.Close()
     }
 }
 
@@ -447,21 +447,25 @@ func setBucketAcl(bucketName, permission string) {
 
 //Ref: http://play.golang.org/p/S2s3e0nj4s
 func doesFileMatch(r1, r2 io.Reader) bool {
-    buf1 := bufio.NewReader(r1)
-    buf2 := bufio.NewReader(r2)
+    bufio1 := bufio.NewReader(r1)
+    bufio2 := bufio.NewReader(r2)
+    var buf1 []byte
+    var buf2 []byte
+    buf1 = make([]byte, 4096)
+    buf2 = make([]byte, 4096)
     for {
-        b1, err1 := buf1.ReadByte()
-        b2, err2 := buf2.ReadByte()
-        if err1 != nil && err1 != io.EOF {
+        n1, err1 := io.ReadFull(bufio1, buf1)
+        n2, err2 := io.ReadFull(bufio2, buf2)
+        if n1 != n2 {
             return false
         }
-        if err2 != nil && err2 != io.EOF {
-            return false
-        }
-        if err1 == io.EOF || err2 == io.EOF {
+        if err1 == io.EOF || err1 == io.ErrUnexpectedEOF ||
+           err2 == io.EOF || err2 == io.ErrUnexpectedEOF {
             return err1 == err2
+        } else if err1 != nil || err2 != nil {
+            return false
         }
-        if b1 != b2{
+        if !bytes.Equal(buf1, buf2) {
             return false
         }
     }

@@ -17,8 +17,12 @@ SmallTestF  = TempData + "testFile"
 LargeTestF  = TempData + "testFile.large"
 
 def main()
+    signVer = SignVer
+    if ARGV.length > 0
+        signVer = ARGV[0]
+    end
     begin
-        init(SignVer)
+        init(signVer)
         createBucket(Bucket)
 
         # Put Object Test

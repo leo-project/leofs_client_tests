@@ -60,6 +60,9 @@ public class LeoFSTest {
 
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        if (args.length > 0)
+            signVer = args[0];
+        System.out.println(signVer);
         // Init
         init(signVer);
         createBucket(bucket);

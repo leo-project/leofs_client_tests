@@ -8,9 +8,12 @@
         <fileset dir="./extras" includes="**/*.jar"/>
         <pathelement location="."/>
     </path>
+    <property name="signver" value="v4" />
 
     <target name="run">
         <javac srcdir="." destdir="." classpathref="aws.java.sdk.classpath"/>
-        <java classname="LeoFSTest" classpathref="aws.java.sdk.classpath" fork="true"/>
+        <java classname="LeoFSTest" classpathref="aws.java.sdk.classpath" fork="true">
+            <arg value="${signver}"/>
+        </java>
     </target>
 </project>

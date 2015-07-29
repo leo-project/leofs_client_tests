@@ -23,8 +23,13 @@ define('LARGE_TEST_F', TEMP_DATA."testFile.large");
 
 $s3;    // S3 Client
 
+$signVer = SIGN_VER;
+if ($argc > 1) {
+   $signVer = $argv[1];
+}
+
 try {
-    init(SIGN_VER);
+    init($signVer);
     createBucket(BUCKET);
 
     // Put Object Test

@@ -9,6 +9,7 @@ import boto
 import traceback
 import os
 import hashlib
+import sys
 from functools import partial
 
 Host    = "localhost"
@@ -27,6 +28,9 @@ LargeTestF  = TempData + "testFile.large"
 s3 = None
 
 def main():
+    global SignVer
+    if len(sys.argv) > 1:
+        SignVer = sys.argv[1]
     try:
         init(SignVer)
         createBucket(Bucket)

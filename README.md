@@ -5,7 +5,9 @@
 
 ```bash
 $ cd aws-sdk-java
-$ ant
+$ ant -Dsignver=v4
+or
+$ ant -Dsignver=v2
 ```
 
 ### PHP - aws-sdk-php
@@ -21,7 +23,9 @@ $ php composer.phar install
 
 ```bash
 $ cd aws-sdk-php
-$ php LeoFSTest.php
+$ php LeoFSTest.php v4
+or
+$ php LeoFSTest.php v2
 ```
 
 ### GO - aws-sdk-go
@@ -67,7 +71,9 @@ $ sudo gem install content_type
 
 ```bash
 $ cd aws-sdk-ruby
-$ ruby LeoFSTest.rb
+$ ruby LeoFSTest.rb v4
+or
+$ ruby LeoFSTest.rb v2
 ``` 
 
 ### Python - boto
@@ -81,7 +87,9 @@ $ sudo pip install filechunkio
 #### Execute the test-case
 
 ```bash
-$ python leo.py
+$ python LeoFSTest.py v4
+or
+$ python LeoFSTest.py v2
 ```
 
 ### Erlang - erlcloud
