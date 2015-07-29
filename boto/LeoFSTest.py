@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # coding: utf8
 
+from boto.s3.prefix import Prefix
 from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from boto.s3.bucket import Bucket
 from boto.s3.key import Key
@@ -10,6 +11,8 @@ import traceback
 import os
 import hashlib
 import sys
+import time
+import pprint
 from functools import partial
 
 Host    = "localhost"
@@ -76,6 +79,7 @@ def main():
     
         # Multiple Page List Object Test
         putDummyObjects(Bucket, "list/", 35, SmallTestF)
+        time.sleep(3)
         pageListBucket(Bucket, "list/", 35, 10)
     
         # Multiple Delete
@@ -204,9 +208,10 @@ def listObject(bucketName, prefix, expected):
     bucket = s3.get_bucket(bucketName, validate=False)
     count = 0
     for obj in bucket.list():
-        if doesFileExist(bucketName, obj.key):
-            print "%s \t Size: %d\n" % (obj.key, obj.size)
-            count = count + 1
+        if not isinstance(obj, Prefix):
+            if doesFileExist(bucketName, obj.key):
+                print "%s \t Size: %d\n" % (obj.key, obj.size)
+                count = count + 1
     if expected >= 0 and count != expected:
         raise ValueError("Number of Objects NOT Match!")
     print "===== List Objects End ====="
@@ -216,7 +221,8 @@ def deleteAllObjects(bucketName):
     print "===== Delete All Objects [%s] Start =====" % bucketName
     bucket = s3.get_bucket(bucketName, validate=False)
     for obj in bucket.list():
-        obj.delete()
+        if not isinstance(obj, Prefix):
+            obj.delete()
     print "===== Delete All Objects End ====="
     print
 
