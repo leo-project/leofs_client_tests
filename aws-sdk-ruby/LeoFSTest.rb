@@ -66,6 +66,7 @@ def main()
 
         # Multiple Page List Object Test
         putDummyObjects(Bucket, "list/", 35, SmallTestF)
+        sleep(3)
         pageListBucket(Bucket, "list/", 35, 10)
 
         # Multiple Delete
