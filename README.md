@@ -103,3 +103,15 @@ $ make
 ```bash
 $ ./LeoFSTest.erl
 ```
+
+#### Java - jclouds
+#### Install the libraries
+```bash
+$ cd jclouds
+$ mvn dependency:copy-dependencies
+```
+
+#### Execute the test-case
+```bash
+$ ant
+```

@@ -1,42 +1,40 @@
-// Java Built-in
 import java.io.IOException;
 import java.io.File;
+import java.io.InputStream;
 import java.io.FileInputStream;
-import java.io.BufferedInputStream;
 import java.io.RandomAccessFile;
 import java.security.MessageDigest;
+import java.util.Properties;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
 
-// AWS-SDK-Java
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.Bucket;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.amazonaws.services.s3.model.DeleteObjectsResult.DeletedObject;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.Upload;
+import org.jclouds.ContextBuilder;
+import org.jclouds.s3.domain.ObjectMetadata;
+import org.jclouds.s3.domain.ListBucketResponse;
+import org.jclouds.s3.domain.DeleteResult;
+import org.jclouds.s3.domain.CannedAccessPolicy;
+import org.jclouds.s3.domain.AccessControlList;
+import org.jclouds.s3.domain.AccessControlList.Grant;
+import org.jclouds.blobstore.BlobStore;
+import org.jclouds.blobstore.BlobStoreContext;
+import org.jclouds.blobstore.domain.Blob;
+import org.jclouds.blobstore.domain.BlobMetadata;
+import org.jclouds.blobstore.domain.PageSet;
 
-// Extra
+import static org.jclouds.blobstore.options.PutOptions.Builder.multipart;
+import static org.jclouds.blobstore.options.GetOptions.Builder.range;
+import static org.jclouds.s3.options.ListBucketOptions.Builder.withPrefix;
+import static org.jclouds.s3.options.PutBucketOptions.Builder.withBucketAcl;
+
+import org.jclouds.io.Payload;
+import org.jclouds.io.Payloads;
+import org.jclouds.aws.s3.AWSS3Client;
+
+import com.google.common.io.ByteSource;
+import com.google.common.io.Closeables;
+import com.google.common.io.Files;
+
 import org.apache.commons.io.IOUtils;
 
 public class LeoFSTest {
@@ -48,21 +46,19 @@ public class LeoFSTest {
 
     private static String signVer   = "v4";
 
-    private static String bucket    = "testj";
+    private static String bucket    = "testjc";
     private static String tempData  = "../temp_data/";
 
     private static final String smallTestF  = tempData + "testFile";
     private static final String largeTestF  = tempData + "testFile.large"; 
-
-    private static ClientConfiguration config;
-    private static AWSCredentials credentials;
-    private static AmazonS3 s3;
-
+    private static BlobStore s3;
+    private static BlobStoreContext s3c;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length > 0)
             signVer = args[0];
         System.out.println(signVer);
+
         // Init
         init(signVer);
         createBucket(bucket);
@@ -86,18 +82,20 @@ public class LeoFSTest {
         getObject(bucket, "test.simple",    smallTestF);
         getObject(bucket, "test.simple.mp", smallTestF);
         getObject(bucket, "test.large",     largeTestF);
-// MP File ETag != MD5
-//        getObject(bucket, "test.large.mp",  largeTestF);
+        getObject(bucket, "test.large.mp",  largeTestF);
 
         // Get Not Exist Object Test
         getNotExist(bucket, "test.noexist");
+
+/*
+        // LeoFS does not reply "Last-Modified" for Range-GET
 
         // Range Get Object Test
         rangeObject(bucket, "test.simple",      smallTestF, 1, 4); 
         rangeObject(bucket, "test.simple.mp",   smallTestF, 1, 4); 
         rangeObject(bucket, "test.large",       largeTestF, 1048576, 10485760); 
         rangeObject(bucket, "test.large.mp",    largeTestF, 1048576, 10485760); 
-
+*/
         // Copy Object Test
         copyObject(bucket, "test.simple", "test.simple.copy");
         getObject(bucket, "test.simple.copy", smallTestF);
@@ -117,40 +115,47 @@ public class LeoFSTest {
         // Multiple Delete
         multiDelete(bucket, "list/", 10);
 
+/*
+        //Jclouds does not support directly set with Canned ACL
+        //LeoFS only support Canned ACL
+        
         // GET-PUT ACL
         setBucketAcl(bucket, "private");
         setBucketAcl(bucket, "public-read");
         setBucketAcl(bucket, "public-read-write");
+*/
     }
 
-    public static void init(String SignVer) {
-        System.out.println("----- Init Start -----");
-        config = new ClientConfiguration();
-        config.setProxyHost(host);
-        config.setProxyPort(port);
-        config.withProtocol(Protocol.HTTP);
-        if (SignVer.equals("v4")) {
-            config.setSignerOverride("AWSS3V4SignerType");
-        }
-        credentials = new BasicAWSCredentials(accessKeyId, secretAccessKey);
-        s3 = new AmazonS3Client(credentials, config);
-        System.out.println("----- Init End -----");
-        System.out.println();
+    private static void init(String signVer) {
+        Properties overrides = new Properties();
+        overrides.setProperty("jclouds.s3.virtual-host-buckets", "false");
+        s3c = ContextBuilder.newBuilder("aws-s3")
+            .credentials(accessKeyId, secretAccessKey)
+            .endpoint("http://" + host + ":" + port)
+            .overrides(overrides)
+            .buildView(BlobStoreContext.class);
+        s3 = s3c.getBlobStore();
     }
 
     public static void createBucket(String bucketName) throws IOException {
         System.out.println("===== Create Bucket [" + bucketName + "] Start =====");
-        s3.createBucket(bucketName);
-        if (!s3.doesBucketExist(bucketName)) {
+        s3.createContainerInLocation(null, bucketName);
+        if (!s3.containerExists(bucketName)) {
             throw new IOException("Create Bucket [" + bucketName + "] Failed!");
         }
         System.out.println("===== Create Bucket End =====");
         System.out.println();
     }
 
-    private static void doPutObject(String bucketName, String key, String path) {
+    private static void doPutObject(String bucketName, String key, String path) throws IOException {
         File file = new File(path);
-        s3.putObject(new PutObjectRequest(bucketName, key, file));
+        ByteSource byteSource = Files.asByteSource(file);
+        Payload payload = Payloads.newByteSourcePayload(byteSource);
+        Blob blob = s3.blobBuilder(key)
+            .payload(payload)
+            .contentLength(byteSource.size())
+            .build();
+        s3.putBlob(bucketName, blob);
     }
 
     public static void putObject(String bucketName, String key, String path) throws IOException {
@@ -165,21 +170,14 @@ public class LeoFSTest {
 
     public static void mpObject(String bucketName, String key, String path) throws IOException, InterruptedException {
         System.out.println("===== Multipart Upload Object [" + bucketName + "/" + key + "] Start =====");
-        TransferManager tx = new TransferManager(s3);
-        BufferedInputStream bufferedStream = new BufferedInputStream(new FileInputStream(path));
-
         File file = new File(path);
-        long fileSize = file.length();
-        ObjectMetadata meta = new ObjectMetadata();
-        meta.setContentLength(fileSize);
-        Upload upload = tx.upload(bucketName, key, bufferedStream, meta); 
-        while (upload.isDone() == false) {
-            System.out.println(" - Progress: " + upload.getProgress().getBytesTransferred() 
-                                  + "Byte \t" + upload.getProgress().getPercentTransferred() + "%" );
-            Thread.sleep(100);
-        } 
-        upload.waitForCompletion();
-        tx.shutdownNow(Boolean.FALSE.booleanValue());
+        ByteSource byteSource = Files.asByteSource(file);
+        Payload payload = Payloads.newByteSourcePayload(byteSource);
+        Blob blob = s3.blobBuilder(key)
+            .payload(payload)
+            .contentLength(byteSource.size())
+            .build();
+        s3.putBlob(bucketName, blob, multipart());
         if (!doesFileExist(bucketName, key)) {
             throw new IOException("Multipart Upload Object [" + bucketName + "/" + key + "] Failed!");
         }
@@ -189,9 +187,9 @@ public class LeoFSTest {
 
     public static void headObject(String bucketName, String key, String path) throws IOException {
         System.out.println("===== Head Object [" + bucketName + "/" + key + "] Start =====");
-        ObjectMetadata meta = s3.getObjectMetadata(bucketName, key);
-        String etag = meta.getETag();
-        long length = meta.getContentLength();
+        BlobMetadata meta = s3.blobMetadata(bucketName, key);
+        String etag = meta.getETag().substring(1,33);
+        long length = meta.getSize();
         File file = new File(path);
         String md5 = MD5(path);
         System.out.println("ETag: " + etag + ", Size: " + length);
@@ -204,8 +202,9 @@ public class LeoFSTest {
 
     public static void getObject(String bucketName, String key, String path) throws IOException {
         System.out.println("===== Get Object [" + bucketName + "/" + key + "] Start =====");
-        S3Object object = s3.getObject(bucketName, key);
-        if (!IOUtils.contentEquals(object.getObjectContent(), new FileInputStream(path))) {
+        Blob object = s3.getBlob(bucketName, key);
+        InputStream stream = object.getPayload().openStream();
+        if (!IOUtils.contentEquals(stream, new FileInputStream(path))) {
             throw new IOException("Content NOT Match!");
         }
         System.out.println("===== Get Object End =====");
@@ -214,8 +213,10 @@ public class LeoFSTest {
 
     public static void rangeObject(String bucketName, String key, String path, int start, int end) throws IOException {
         System.out.println("===== Range Get Object [" + bucketName + "/" + key + "] (" + start + "-" + end + ") Start =====");
-        S3Object object = s3.getObject(new GetObjectRequest(bucketName, key).withRange(start, end));
-        byte [] res = IOUtils.toByteArray(object.getObjectContent());
+        Blob object = s3.getBlob(bucketName, key, range(start, end));
+        InputStream stream = object.getPayload().openStream();
+
+        byte [] res = IOUtils.toByteArray(stream);
 
         RandomAccessFile raf = new RandomAccessFile(path, "r");
         raf.seek(start);
@@ -231,14 +232,9 @@ public class LeoFSTest {
 
     public static void getNotExist(String bucketName, String key) throws IOException {
         System.out.println("===== Get Not Exist Object [" + bucketName + "/" + key + "] Start =====");
-        try {
-            S3Object object = s3.getObject(bucketName, key);
+        Blob object = s3.getBlob(bucketName, key);
+        if (object != null) {
             throw new IOException("Should NOT Exist!");
-        } catch (AmazonS3Exception s3e) {
-            int code = s3e.getStatusCode();
-            if (code != 403 && code != 404) {
-                throw new IOException("Incorrect Status Code [" + code + "]!");
-            }
         }
         System.out.println("===== Get Not Exist Object End =====");
         System.out.println();
@@ -248,7 +244,8 @@ public class LeoFSTest {
         System.out.println("===== Copy Object [" + 
                 bucketName + "/" + src + "] -> [" + 
                 bucketName + "/" + dst + "] Start =====");
-        s3.copyObject(bucketName, src, bucketName, dst);
+        AWSS3Client s3cli = s3c.unwrapApi(AWSS3Client.class);
+        s3cli.copyObject(bucketName, src, bucketName, dst);
         if (!doesFileExist(bucketName, dst)) {
             throw new IOException("Copy Object Failed!");
         }
@@ -258,11 +255,13 @@ public class LeoFSTest {
 
     public static void listObject(String bucketName, String prefix, int expected) throws IOException {
         System.out.println("===== List Objects [" + bucketName + "/" + prefix + "*] Start =====");
-        ObjectListing objList = s3.listObjects(bucketName, prefix);
+
+        AWSS3Client s3cli = s3c.unwrapApi(AWSS3Client.class);
+        ListBucketResponse objList = s3cli.listBucket(bucketName, withPrefix(prefix));
         int count = 0;
-        for (S3ObjectSummary objectSummary : objList.getObjectSummaries()) {
-            if (doesFileExist(bucketName, objectSummary.getKey())) {
-                System.out.println(objectSummary.getKey() + " \t Size: " + objectSummary.getSize());
+        for (ObjectMetadata obj : objList) {
+            if (doesFileExist(bucketName, obj.getKey())) {
+                System.out.println(obj.getKey() + " \t Size: " + obj.getContentMetadata().getContentLength());
                 count ++;
             }
         }
@@ -271,19 +270,7 @@ public class LeoFSTest {
                 throw new IOException("Number of Objects NOT Match!");
             }
         }
-
         System.out.println("===== List Objects End =====");
-        System.out.println();
-    }
-
-    public static void deleteAllObjects(String bucketName) throws IOException {
-        System.out.println("===== Delete All Objects [" + bucketName + "] Start =====");
-        ObjectListing objList = s3.listObjects(bucketName, "");
-        for (S3ObjectSummary objectSummary : objList.getObjectSummaries()) {
-            s3.deleteObject(bucketName, objectSummary.getKey());
-        }
-
-        System.out.println("===== Delete All Objects End =====");
         System.out.println();
     }
 
@@ -295,28 +282,40 @@ public class LeoFSTest {
 
     public static void pageListBucket(String bucketName, String prefix, int total, int pageSize) throws IOException {
         System.out.println("===== Multiple Page List Objects [" + bucketName + "/" + prefix + "*] " + total + " Objs @" + pageSize + " Start =====");
-        ObjectListing objList = s3.listObjects(new ListObjectsRequest(bucketName, prefix, null, null, pageSize));
+        AWSS3Client s3cli = s3c.unwrapApi(AWSS3Client.class);
         int actualCount = 0;
-        while(true){
+        ListBucketResponse objList;
+        String marker = "";
+        do {
             System.out.println("===== Page =====");
-            for (S3ObjectSummary objectSummary : objList.getObjectSummaries()) {
-                actualCount++;
-                System.out.println(objectSummary.getKey() 
-                        + " \t Size: " + objectSummary.getSize()
-                        + " \t Count: " + actualCount);
+            objList = s3cli.listBucket(bucketName, withPrefix(prefix).maxResults(pageSize).afterMarker(marker));
+            for (ObjectMetadata obj : objList) {
+                if (doesFileExist(bucketName, obj.getKey())) {
+                    actualCount++;
+                    System.out.println(obj.getKey() 
+                            + " \t Size: " + obj.getContentMetadata().getContentLength()
+                            + " \t Count: " + actualCount);
+                }
             }
-            if (!objList.isTruncated()) {
-                break;
-            } else {
-                objList.setBucketName(bucketName);
-                objList = s3.listNextBatchOfObjects(objList);
-            }
-        }
+            marker = objList.getNextMarker();
+        } while (objList.isTruncated());
         System.out.println("===== End =====");
         if (total != actualCount) {
             throw new IOException("Number of Objects NOT Match!");
         }
         System.out.println("===== Multiple Page List Objects End =====");
+        System.out.println();
+    }
+
+    public static void deleteAllObjects(String bucketName) throws IOException {
+        System.out.println("===== Delete All Objects [" + bucketName + "] Start =====");
+        AWSS3Client s3cli = s3c.unwrapApi(AWSS3Client.class);
+        ListBucketResponse objList = s3cli.listBucket(bucketName);
+        for (ObjectMetadata obj : objList) {
+            s3.removeBlob(bucketName, obj.getKey().substring(1));
+        }
+
+        System.out.println("===== Delete All Objects End =====");
         System.out.println();
     }
 
@@ -326,13 +325,12 @@ public class LeoFSTest {
         for (int i = 0; i < total; i++) { 
             delList.add(prefix + i);
         }
-        String [] delKeys = delList.toArray(new String[total]);
-        DeleteObjectsResult delRes = s3.deleteObjects(new DeleteObjectsRequest(bucketName).withKeys(delKeys));
-        List<DeleteObjectsResult.DeletedObject> delObjList = delRes.getDeletedObjects();
-        for (DeleteObjectsResult.DeletedObject delObj : delObjList) {
-            System.out.println("Deleted " + bucketName + "/" + delObj.getKey());
+        AWSS3Client s3cli = s3c.unwrapApi(AWSS3Client.class);
+        DeleteResult delRes = s3cli.deleteObjects(bucketName, delList);
+        for (String deleted : delRes.getDeleted()) {
+            System.out.println("Deleted " + bucketName + "/" + deleted);
         }
-        if (delObjList.size() != total) {
+        if (delRes.getDeleted().size() != total) {
             throw new IOException("Number of Objects NOT Match!");
         }
 
@@ -342,17 +340,17 @@ public class LeoFSTest {
 
     public static void setBucketAcl(String bucketName, String permission) throws IOException {
         System.out.println("===== Set Bucket ACL [" + bucketName + "] (" + permission + ") Start =====");
-        CannedAccessControlList targetAcl;
+        CannedAccessPolicy targetCAP;
         List<String> checkList = new ArrayList<String>();
         if (permission.equals("private")) {
-            targetAcl = CannedAccessControlList.Private;
+            targetCAP = CannedAccessPolicy.PRIVATE;
             checkList.add("FULL_CONTROL");
         } else if (permission.equals("public-read")) {
-            targetAcl = CannedAccessControlList.PublicRead;
+            targetCAP = CannedAccessPolicy.PUBLIC_READ;
             checkList.add("READ");
             checkList.add("READ_ACP");
         } else if (permission.equals("public-read-write")) {
-            targetAcl = CannedAccessControlList.PublicReadWrite;
+            targetCAP = CannedAccessPolicy.PUBLIC_READ_WRITE;
             checkList.add("READ");
             checkList.add("READ_ACP");
             checkList.add("WRITE");
@@ -360,9 +358,12 @@ public class LeoFSTest {
         } else {
             throw new IOException("Invalid Permission!");
         }
-        s3.setBucketAcl(bucketName, targetAcl);
-        AccessControlList acl = s3.getBucketAcl(bucketName);
-        System.out.println("Owner ID: " + acl.getOwner());
+        AWSS3Client s3cli = s3c.unwrapApi(AWSS3Client.class);
+        AccessControlList targetAcl = AccessControlList.fromCannedAccessPolicy(targetCAP, accessKeyId);
+        s3cli.putBucketACL(bucketName, targetAcl);
+        AccessControlList acl = s3cli.getBucketACL(bucketName);
+        System.out.println("Owner ID: " + acl.getOwner().getId());
+
         List<String> list = new ArrayList<String>();
         for (Grant grant : acl.getGrants()) {
             System.out.println("Grantee : " + grant.getGrantee() + " \t Permissions: " + grant.getPermission()); 
@@ -378,24 +379,8 @@ public class LeoFSTest {
         System.out.println();
     }
 
-    public static boolean doesFileExist(String bucketName, String key ) throws AmazonClientException{
-        boolean isValidFile = true;
-        try {
-            ObjectMetadata objectMetadata = s3.getObjectMetadata(bucketName, key);
-        } catch ( AmazonS3Exception s3e ) {
-            if ( s3e.getStatusCode() == 404 ) {
-                // i.e. 404: NoSuchKey - The specified key does not exist
-                isValidFile = false;
-            }
-            else {
-                throw s3e; // rethrow all S3 exceptions other than 404 
-            }
-        }
-        catch ( Exception exception ) {
-            exception.printStackTrace();
-            isValidFile = false;
-        }
-        return isValidFile;
+    private static boolean doesFileExist(String bucketName, String key) {
+        return s3.blobExists(bucketName, key);
     }
 
     public static String MD5( String filePath )

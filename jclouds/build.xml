@@ -1,7 +1,7 @@
 <!-- Ant build script for compiling and running the AWS Java SDK S3 sample.
      Don't forget to fill in your AWS access credentials in AwsCredentials.properties
      before trying to run it.  -->
-<project name="JClouds Sample" default="run" basedir=".">
+<project name="JClouds LeoFS Test" default="run" basedir=".">
     <path id="jclouds.java.sdk.classpath">
         <fileset dir="./target/dependency" includes="*.jar"/>
         <pathelement location="."/>
@@ -10,7 +10,7 @@
     <target name="run">
         <javac srcdir="." destdir="." classpathref="jclouds.java.sdk.classpath"/>
         <!--<java classname="Sample" classpathref="jclouds.java.sdk.classpath" fork="true">-->
-        <java classname="Sample" classpathref="jclouds.java.sdk.classpath" >
+        <java classname="LeoFSTest" classpathref="jclouds.java.sdk.classpath" >
              <arg line="s3 05236 802562235 jclouds-test"/>
         </java>
     </target>
