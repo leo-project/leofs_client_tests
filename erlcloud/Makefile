@@ -9,7 +9,7 @@ compile:
 	@./rebar compile
 
 exec:
-	./bootstrap.erl
+	./LeoFSTest.erl
 
 clean:
 	@./rebar clean

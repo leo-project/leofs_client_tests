@@ -94,10 +94,24 @@ $ python LeoFSTest.py v2
 
 ### Erlang - erlcloud
 #### Install the libraries
+```bash
+$ cd erlcloud
+$ make
+```
 
 #### Execute the test-case
-
 ```bash
-$ make 
+$ ./LeoFSTest.erl
 ```
-### s3cmd
+
+#### Java - jclouds
+#### Install the libraries
+```bash
+$ cd jclouds
+$ mvn dependency:copy-dependencies
+```
+
+#### Execute the test-case
+```bash
+$ ant
+```
