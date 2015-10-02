@@ -98,9 +98,6 @@ def init(signVer):
     if signVer == "v4":
         boto.config.add_section('s3')
         boto.config.set('s3', 'use-sigv4', 'True')
-    else:
-        boto.config.add_section('s3')
-        boto.config.set('s3', 'use-sigv4', 'False')
     s3 = S3Connection(
             AccessKeyId,
             SecretAccessKey,
