@@ -74,10 +74,9 @@ main(_Args)->
     deleteAllObjects(?BUCKET),
     listObject(?BUCKET, [], 0),
 
-%% erlcloud does not have next_marker
-%%    %% Multiple Page List Object Test
-%%    putDummyObjects(?BUCKET, "list/", 35, ?SMALL_TEST_F),
-%%    pageListBucket(?BUCKET, "list/", 35, 10),
+    %% Multiple Page List Object Test
+    putDummyObjects(?BUCKET, "list/", 35, ?SMALL_TEST_F),
+    pageListBucket(?BUCKET, "list/", 35, 10),
 
 %% erlcloud does not have config for delete_objects_batch
 %%    %% Multiple Delete
@@ -275,28 +274,28 @@ deleteAllObjects(BucketName) ->
     io:format("\n"),
     ok.
 
-%%putDummyObjects(BucketName, Prefix, Total, Holder) ->
-%%    Conf = get(s3),
-%%    {ok, Bin} = file:read_file(Holder),
-%%    lists:foreach(fun(I) ->
-%%                          Key = Prefix ++ integer_to_list(I),
-%%                          erlcloud_s3:put_object(BucketName, Key, Bin, [], Conf)
-%%                  end, lists:seq(1,Total)).
-%%
-%%pageListBucket(BucketName, Prefix, Total, PageSize) ->
-%%    io:format("===== Multiple Page List Objects [~s/~s*] Start =====\n", [BucketName, Prefix]),
-%%    Count = getPage(BucketName, Prefix, 0, [], PageSize),
-%%    io:format("===== End =====\n"),
-%%    if Count =:= Total ->
-%%           ok;
-%%       true ->
-%%           io:format("Number of Objects NOT Match!\n"),
-%%           throw(error)
-%%    end,
-%%    io:format("===== Multiple Page List Objects End =====\n"),
-%%    io:format("\n"),
-%%    ok.
-%%
+putDummyObjects(BucketName, Prefix, Total, Holder) ->
+    Conf = get(s3),
+    {ok, Bin} = file:read_file(Holder),
+    lists:foreach(fun(I) ->
+                          Key = Prefix ++ integer_to_list(I),
+                          erlcloud_s3:put_object(BucketName, Key, Bin, [], Conf)
+                  end, lists:seq(1,Total)).
+
+pageListBucket(BucketName, Prefix, Total, PageSize) ->
+    io:format("===== Multiple Page List Objects [~s/~s*] Start =====\n", [BucketName, Prefix]),
+    Count = getPage(BucketName, Prefix, 0, [], PageSize),
+    io:format("===== End =====\n"),
+    if Count =:= Total ->
+           ok;
+       true ->
+           io:format("Number of Objects NOT Match!\n"),
+           throw(error)
+    end,
+    io:format("===== Multiple Page List Objects End =====\n"),
+    io:format("\n"),
+    ok.
+
 %%multiDelete(BucketName, Prefix, Total) ->
 %%    Conf = get(s3),
 %%    io:format("===== Multiple Delete Objects [~s/~s] Start =====\n", [BucketName, Prefix]),
@@ -310,43 +309,44 @@ deleteAllObjects(BucketName) ->
 %%    io:format("\n"),
 %%    ok.
 %%
-%%getPage(BucketName, Prefix, Count, Marker, PageSize) ->
-%%    Conf = get(s3),
-%%    Options = [{max_keys, PageSize}],
-%%    Options2 = case Prefix of
-%%                   [] ->
-%%                       Options;
-%%                   _ ->
-%%                       Options ++ [{prefix, Prefix}]
-%%               end,
-%%    Options3 = case Marker of
-%%                   [] ->
-%%                       Options2;
-%%                   _ ->
-%%                       Options2 ++ [{marker, Marker}]
-%%               end,
-%%    Res = erlcloud_s3:list_objects(BucketName, Options3, Conf),
-%%    io:format("===== Page =====\n"),
-%%    ObjList = proplists:get_value(contents, Res),
-%%    Inc = lists:foldl(fun(Obj, Acc) ->
-%%                              ETag = string:substr(proplists:get_value(etag, Obj), 2, 32),
-%%                              Size = proplists:get_value(size, Obj),
-%%                              Key = proplists:get_value(key, Obj),
-%%                              case doesObjectExist(BucketName, Key) of
-%%                                  true ->
-%%                                      io:format("~s \t Size: ~p \t Count: ~p\n", [ETag, Size, Acc + Count + 1]),
-%%                                      Acc + 1;
-%%                                  false ->
-%%                                      Acc
-%%                              end
-%%                      end, 0, ObjList),
-%%    case proplists:get_value(is_truncated, Res) of
-%%        false ->
-%%            Count + Inc;
-%%        true ->
-%%            NextMarker = proplists:get_value(next_marker, Res),
-%%            getPage(BucketName, Prefix, Count + Inc, NextMarker, PageSize)
-%%    end.
+getPage(BucketName, Prefix, Count, Marker, PageSize) ->
+    Conf = get(s3),
+    Options = [{max_keys, PageSize}],
+    Options2 = case Prefix of
+                   [] ->
+                       Options;
+                   _ ->
+                       Options ++ [{prefix, Prefix}]
+               end,
+    Options3 = case Marker of
+                   [] ->
+                       Options2;
+                   _ ->
+                       Options2 ++ [{marker, Marker}]
+               end,
+    Res = erlcloud_s3:list_objects(BucketName, Options3, Conf),
+    io:format("===== Page =====\n"),
+    ObjList = proplists:get_value(contents, Res),
+    Inc = lists:foldl(fun(Obj, Acc) ->
+                              ETag = string:substr(proplists:get_value(etag, Obj), 2, 32),
+                              Size = proplists:get_value(size, Obj),
+                              Key = proplists:get_value(key, Obj),
+                              case doesObjectExist(BucketName, Key) of
+                                  true ->
+                                      io:format("~s \t Size: ~p \t Count: ~p\n", [ETag, Size, Acc + Count + 1]),
+                                      Acc + 1;
+                                  false ->
+                                      Acc
+                              end
+                      end, 0, ObjList),
+    case proplists:get_value(is_truncated, Res) of
+        false ->
+            Count + Inc;
+        true ->
+            LastRec = lists:last(ObjList),
+            NextMarker = proplists:get_value(key, LastRec),
+            getPage(BucketName, Prefix, Count + Inc, NextMarker, PageSize)
+    end.
 
 doesObjectExist(BucketName, Key) ->
     Conf = get(s3),
