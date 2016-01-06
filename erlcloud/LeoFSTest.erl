@@ -17,7 +17,7 @@
 -define(SMALL_TEST_F    , ?TEMPDATA++"testFile").
 -define(LARGE_TEST_F    , ?TEMPDATA++"testFile.large").
 
--define(CHUNK_SIZE,     5242880).
+-define(CHUNK_SIZE,     10485760).
 
 main(_Args)->
     ok = code:add_paths(["ebin",
@@ -61,7 +61,9 @@ main(_Args)->
     rangeObject(?BUCKET, "test.simple",      ?SMALL_TEST_F, 1, 4), 
     rangeObject(?BUCKET, "test.simple.mp",   ?SMALL_TEST_F, 1, 4), 
     rangeObject(?BUCKET, "test.large",       ?LARGE_TEST_F, 1048576, 10485760), 
-    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 1048576, 10485760), 
+    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 1048576, 10485760),
+    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 31457280, 41943040),
+    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 41943040, 52420000),
 
     %% Copy Object Test
     copyObject(?BUCKET, "test.simple", "test.simple.copy"),
