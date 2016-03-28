@@ -9,7 +9,7 @@ use Aws\S3\Exception\NoSuchKeyException;
 use Guzzle\Http\EntityBody;
 use Guzzle\Http\ReadLimitEntityBody;
 
-define('HOST',  "localhost");
+define('HOST',  "unode05");
 define('PORT',  8080);
 
 define('ACCESS_KEY_ID', "05236");
@@ -19,6 +19,7 @@ define('BUCKET', "testp");
 define('TEMP_DATA', "../temp_data/");
 
 define('SMALL_TEST_F', TEMP_DATA."testFile");
+define('MEDIUM_TEST_F', TEMP_DATA."testFile.medium");
 define('LARGE_TEST_F', TEMP_DATA."testFile.large");
 
 $s3;    // S3 Client
@@ -34,6 +35,7 @@ try {
 
     // Put Object Test
     putObject(BUCKET, "test.simple",    SMALL_TEST_F);
+    putObject(BUCKET, "test.medium",    MEDIUM_TEST_F);
     putObject(BUCKET, "test.large",     LARGE_TEST_F);
 
     // Multipart Upload Test
@@ -50,8 +52,15 @@ try {
     // Get Object Test
     getObject(BUCKET, "test.simple",    SMALL_TEST_F);
     getObject(BUCKET, "test.simple.mp", SMALL_TEST_F);
+    getObject(BUCKET, "test.medium",    MEDIUM_TEST_F);
     getObject(BUCKET, "test.large",     LARGE_TEST_F);
     getObject(BUCKET, "test.large.mp",  LARGE_TEST_F);
+
+    // Get Object Again (Cache) Test
+    getObject(BUCKET, "test.simple",    SMALL_TEST_F);
+    getObject(BUCKET, "test.simple.mp", SMALL_TEST_F);
+    getObject(BUCKET, "test.medium",    MEDIUM_TEST_F);
+    getObject(BUCKET, "test.large",     LARGE_TEST_F);
 
     // Get Not Exist Object Test
     getNotExist(BUCKET, "test.noexist");
@@ -180,6 +189,7 @@ function getObject($bucketName, $key, $path) {
     }
     print "===== Get Object End =====\n";
     print "\n";
+    return $res;
 }
 
 function getNotExist($bucketName, $key) {

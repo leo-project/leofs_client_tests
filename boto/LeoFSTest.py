@@ -26,6 +26,7 @@ Bucket      = "testb"
 TempData    = "../temp_data/"
 
 SmallTestF  = TempData + "testFile"
+MediumTestF = TempData + "testFile.medium"
 LargeTestF  = TempData + "testFile.large"
 
 s3 = None
@@ -40,6 +41,7 @@ def main():
 
         # Put Object Test
         putObject(Bucket, "test.simple",    SmallTestF)
+        putObject(Bucket, "test.medium",    MediumTestF)
         putObject(Bucket, "test.large",     LargeTestF)
     
 #        # Multipart Upload Object Test
@@ -53,10 +55,16 @@ def main():
     
         # Get Object Test
         getObject(Bucket, "test.simple",    SmallTestF)
+        getObject(Bucket, "test.medium",    MediumTestF)
         getObject(Bucket, "test.large",     LargeTestF)
 #        getObject(Bucket, "test.simple.mp", SmallTestF)
 #        getObject(Bucket, "test.large.mp",  LargeTestF)
     
+        # Get Object Again (Cache) Test
+        getObject(Bucket, "test.simple",    SmallTestF)
+        getObject(Bucket, "test.medium",    MediumTestF)
+        getObject(Bucket, "test.large",     LargeTestF)
+
         # Get Not Exist Object Test
         getNotExist(Bucket, "test.noexist")
     

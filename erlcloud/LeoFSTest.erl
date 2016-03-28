@@ -15,6 +15,7 @@
 -define(TEMPDATA    , "../temp_data/").
 
 -define(SMALL_TEST_F    , ?TEMPDATA++"testFile").
+-define(MEDIUM_TEST_F   , ?TEMPDATA++"testFile.medium").
 -define(LARGE_TEST_F    , ?TEMPDATA++"testFile.large").
 
 -define(CHUNK_SIZE,     10485760).
@@ -35,6 +36,7 @@ main(_Args)->
 
     %% Put Object Test
     putObject(?BUCKET, "test.simple",    ?SMALL_TEST_F),
+    putObject(?BUCKET, "test.medium",    ?MEDIUM_TEST_F),
     putObject(?BUCKET, "test.large",     ?LARGE_TEST_F),
 
     %% Multipart Upload Test
@@ -51,8 +53,15 @@ main(_Args)->
     %% Get Object Test
     getObject(?BUCKET, "test.simple",    ?SMALL_TEST_F),
     getObject(?BUCKET, "test.simple.mp", ?SMALL_TEST_F),
+    getObject(?BUCKET, "test.medium",    ?MEDIUM_TEST_F),
     getObject(?BUCKET, "test.large",     ?LARGE_TEST_F),
     getObject(?BUCKET, "test.large.mp",  ?LARGE_TEST_F),
+
+    %% Get Object Again (Cache) Test
+    getObject(?BUCKET, "test.simple",    ?SMALL_TEST_F),
+    getObject(?BUCKET, "test.simple.mp", ?SMALL_TEST_F),
+    getObject(?BUCKET, "test.medium",    ?MEDIUM_TEST_F),
+    getObject(?BUCKET, "test.large",     ?LARGE_TEST_F),
 
     %% Get Not Exist Object Test
     getNotExist(?BUCKET, "test.noexist"),

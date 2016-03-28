@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+    "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
@@ -30,6 +31,7 @@ const (
 	TempData = "../temp_data/"
 
 	SmallTestF = TempData + "testFile"
+    MediumTestF = TempData + "testFile.medium"
 	LargeTestF = TempData + "testFile.large"
 )
 
@@ -41,6 +43,7 @@ func main() {
 
 	// Put Object Test
 	putObject(Bucket, "test.simple", SmallTestF)
+    putObject(Bucket, "test.medium", MediumTestF)
 	putObject(Bucket, "test.large", LargeTestF)
 
 	// Multipart Upload Object Test
@@ -55,8 +58,15 @@ func main() {
 	// Get Object Test
 	getObject(Bucket, "test.simple", SmallTestF)
 	getObject(Bucket, "test.simple.mp", SmallTestF)
+	getObject(Bucket, "test.medium", MediumTestF)
 	getObject(Bucket, "test.large", LargeTestF)
 	getObject(Bucket, "test.large.mp", LargeTestF)
+
+	// Get Object Again (Cache) Test
+	getObject(Bucket, "test.simple", SmallTestF)
+	getObject(Bucket, "test.simple.mp", SmallTestF)
+	getObject(Bucket, "test.medium", MediumTestF)
+	getObject(Bucket, "test.large", LargeTestF)
 
 	// Get Not Exist Object Test
 	getNotExist(Bucket, "test.noexist")
@@ -94,7 +104,8 @@ func main() {
 
 func initS3() {
 	cred := credentials.NewStaticCredentials(AccessKeyId, SecretAccessKey, "")
-	svc = s3.New(aws.DefaultConfig.WithCredentials(cred).
+	svc = s3.New(session.New(), aws.NewConfig().
+        WithCredentials(cred).
 		WithRegion("us-west-2").
 		WithEndpoint(fmt.Sprintf("http://%s:%d", Host, Port)).
 		WithLogLevel(0))
@@ -138,7 +149,7 @@ func mpObject(bucketName, key, path string) {
 	keyStr := aws.String(key)
 	reader, _ := os.Open(path)
 	defer reader.Close()
-	uploader := s3manager.NewUploader(&s3manager.UploadOptions{S3: svc})
+	uploader := s3manager.NewUploaderWithClient(svc)
 	_, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: bucketStr,
 		Key:    keyStr,
@@ -414,14 +425,14 @@ func setBucketAcl(bucketName, permission string) {
 		log.Fatalln("Invalid Permission!")
 	}
 	bucketStr := aws.String(bucketName)
-	_, err := svc.PutBucketACL(&s3.PutBucketACLInput{
+	_, err := svc.PutBucketAcl(&s3.PutBucketAclInput{
 		Bucket: bucketStr,
 		ACL:    aws.String(permission),
 	})
 	if err != nil {
 		log.Fatalln(err)
 	}
-	res, err := svc.GetBucketACL(&s3.GetBucketACLInput{
+	res, err := svc.GetBucketAcl(&s3.GetBucketAclInput{
 		Bucket: bucketStr,
 	})
 	if err != nil {

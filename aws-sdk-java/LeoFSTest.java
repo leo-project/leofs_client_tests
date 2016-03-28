@@ -52,6 +52,7 @@ public class LeoFSTest {
     private static String tempData  = "../temp_data/";
 
     private static final String smallTestF  = tempData + "testFile";
+    private static final String mediumTestF  = tempData + "testFile.medium";
     private static final String largeTestF  = tempData + "testFile.large"; 
 
     private static ClientConfiguration config;
@@ -69,6 +70,7 @@ public class LeoFSTest {
 
         // Put Object Test
         putObject(bucket, "test.simple",    smallTestF);
+        putObject(bucket, "test.medium",    mediumTestF);
         putObject(bucket, "test.large",     largeTestF);
 
         // Multipart Upload Test
@@ -85,9 +87,16 @@ public class LeoFSTest {
         // Get Object Test
         getObject(bucket, "test.simple",    smallTestF);
         getObject(bucket, "test.simple.mp", smallTestF);
+        getObject(bucket, "test.medium",    mediumTestF);
         getObject(bucket, "test.large",     largeTestF);
 // MP File ETag != MD5
 //        getObject(bucket, "test.large.mp",  largeTestF);
+
+        // Get Objetc Again (Cache) Test
+        getObject(bucket, "test.simple",    smallTestF);
+        getObject(bucket, "test.simple.mp", smallTestF);
+        getObject(bucket, "test.medium",    mediumTestF);
+        getObject(bucket, "test.large",     largeTestF);
 
         // Get Not Exist Object Test
         getNotExist(bucket, "test.noexist");
