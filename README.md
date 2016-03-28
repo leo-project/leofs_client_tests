@@ -1,5 +1,11 @@
 ## LeoFS Client TEST
 
+### Preparation
+Generate Test Data with
+```bash
+$ cd temp_data; ./gen.sh
+```
+
 ### Java - aws-sdk-java
 #### Execute the test-case
 
