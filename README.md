@@ -40,8 +40,8 @@ $ php LeoFSTest.php v2
 ```bash
 $ sudo apt-get install golang
 $ mkdir $HOME/go
-$ go get github.com/aws/aws-sdk-go/service/s3
 $ export GOPATH=$HOME/go
+$ go get github.com/aws/aws-sdk-go/service/s3
 ```
 
 #### Execute the test-case
