@@ -22,12 +22,18 @@
 
 main(_Args)->
     ok = code:add_paths(["ebin",
+                         "deps/idna/ebin",
+                         "deps/mimerl/ebin",
+                         "deps/certifi/ebin",
+                         "deps/metrics/ebin",
+                         "deps/ssl_verify_fun/ebin",
+                         "deps/hackney/ebin",
                          "deps/erlcloud/ebin",
                          "deps/jsx/ebin",
                          "deps/meck/ebin",
                          "deps/lhttpc/ebin",
                          "deps/leo_commons/ebin/"]),
-    ssl:start(),
+    hackney:start(),
     erlcloud:start(),
 
     SignVer = ?SIGN_VER,
@@ -106,7 +112,7 @@ init(_SignVer) ->
              ?SECRET_ACCESS_KEY,
              ?HOST,
              ?PORT),
-    Conf2 = Conf#aws_config{s3_scheme = "http://"},
+    Conf2 = Conf#aws_config{s3_scheme = "http://", http_client = hackney},
     put(s3, Conf2).
 
 createBucket(BucketName) ->
