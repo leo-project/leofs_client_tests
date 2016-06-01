@@ -33,8 +33,11 @@ s3 = None
 
 def main():
     global SignVer
+    global Bucket
     if len(sys.argv) > 1:
         SignVer = sys.argv[1]
+    if len(sys.argv) > 2:
+        Bucket = sys.argv[2]
     try:
         init(SignVer)
         createBucket(Bucket)
@@ -83,6 +86,7 @@ def main():
     
         # Delete All Object Test
         deleteAllObjects(Bucket)
+        time.sleep(3)
         listObject(Bucket, "", 0)
     
         # Multiple Page List Object Test
