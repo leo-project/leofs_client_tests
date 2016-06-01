@@ -10,7 +10,6 @@ AccessKeyId     = "05236"
 SecretAccessKey = "802562235"
 SignVer         = "v4"
 
-Bucket      = "testr"
 TempData    = "../temp_data/"
 
 SmallTestF  = TempData + "testFile"
@@ -18,73 +17,78 @@ MediumTestF = TempData + "testFile.medium"
 LargeTestF  = TempData + "testFile.large"
 
 def main()
+    # `bucket` can be configurable via the command argument
+    bucket = "testr"
     signVer = SignVer
     if ARGV.length > 0
         signVer = ARGV[0]
     end
+    if ARGV.length > 1
+        bucket = ARGV[1]
+    end
     begin
         init(signVer)
-        createBucket(Bucket)
+        createBucket(bucket)
 
         # Put Object Test
-        putObject(Bucket, "test.simple",    SmallTestF)
-        putObject(Bucket, "test.medium",    MediumTestF)
-        putObject(Bucket, "test.large",     LargeTestF)
+        putObject(bucket, "test.simple",    SmallTestF)
+        putObject(bucket, "test.medium",    MediumTestF)
+        putObject(bucket, "test.large",     LargeTestF)
 
         # Multipart Upload Object Test
-        mpObject(Bucket, "test.simple.mp",  SmallTestF)
-        mpObject(Bucket, "test.large.mp",   LargeTestF)
+        mpObject(bucket, "test.simple.mp",  SmallTestF)
+        mpObject(bucket, "test.large.mp",   LargeTestF)
 
         # Head Object Test
-        headObject(Bucket, "test.simple",   SmallTestF)
-        headObject(Bucket, "test.simple.mp",SmallTestF)
-        headObject(Bucket, "test.large",    LargeTestF)
+        headObject(bucket, "test.simple",   SmallTestF)
+        headObject(bucket, "test.simple.mp",SmallTestF)
+        headObject(bucket, "test.large",    LargeTestF)
 
         # Get Object Test
-        getObject(Bucket, "test.simple",    SmallTestF)
-        getObject(Bucket, "test.simple.mp", SmallTestF)
-        getObject(Bucket, "test.medium",    MediumTestF)
-        getObject(Bucket, "test.large",     LargeTestF)
-        getObject(Bucket, "test.large.mp",  LargeTestF)
+        getObject(bucket, "test.simple",    SmallTestF)
+        getObject(bucket, "test.simple.mp", SmallTestF)
+        getObject(bucket, "test.medium",    MediumTestF)
+        getObject(bucket, "test.large",     LargeTestF)
+        getObject(bucket, "test.large.mp",  LargeTestF)
 
         # Get Object Again (Cache) Test
-        getObject(Bucket, "test.simple",    SmallTestF)
-        getObject(Bucket, "test.simple.mp", SmallTestF)
-        getObject(Bucket, "test.medium",    MediumTestF)
-        getObject(Bucket, "test.large",     LargeTestF)
+        getObject(bucket, "test.simple",    SmallTestF)
+        getObject(bucket, "test.simple.mp", SmallTestF)
+        getObject(bucket, "test.medium",    MediumTestF)
+        getObject(bucket, "test.large",     LargeTestF)
 
         # Get Not Exist Object Test
-        getNotExist(Bucket, "test.noexist")
+        getNotExist(bucket, "test.noexist")
 
         # Range Get Object Test
-        rangeObject(Bucket, "test.simple",      SmallTestF, 1, 4)
-        rangeObject(Bucket, "test.simple.mp",   SmallTestF, 1, 4)
-        rangeObject(Bucket, "test.large",       LargeTestF, 1048576, 10485760)
-        rangeObject(Bucket, "test.large.mp",    LargeTestF, 1048576, 10485760)
+        rangeObject(bucket, "test.simple",      SmallTestF, 1, 4)
+        rangeObject(bucket, "test.simple.mp",   SmallTestF, 1, 4)
+        rangeObject(bucket, "test.large",       LargeTestF, 1048576, 10485760)
+        rangeObject(bucket, "test.large.mp",    LargeTestF, 1048576, 10485760)
 
         # Copy Object Test
-        copyObject(Bucket, "test.simple", "test.simple.copy")
-        getObject(Bucket, "test.simple.copy", SmallTestF)
+        copyObject(bucket, "test.simple", "test.simple.copy")
+        getObject(bucket, "test.simple.copy", SmallTestF)
 
         # List Object Test
-        listObject(Bucket, "", -1)
+        listObject(bucket, "", -1)
 
         # Delete All Object Test
-        deleteAllObjects(Bucket)
-        listObject(Bucket, "", 0)
+        deleteAllObjects(bucket)
+        listObject(bucket, "", 0)
 
         # Multiple Page List Object Test
-        putDummyObjects(Bucket, "list/", 35, SmallTestF)
+        putDummyObjects(bucket, "list/", 35, SmallTestF)
         sleep(3)
-        pageListBucket(Bucket, "list/", 35, 10)
+        pageListBucket(bucket, "list/", 35, 10)
 
         # Multiple Delete
-        multiDelete(Bucket, "list/", 10)
+        multiDelete(bucket, "list/", 10)
 
         # GET-PUT ACL
-        setBucketAcl(Bucket, "private")
-        setBucketAcl(Bucket, "public-read")
-        setBucketAcl(Bucket, "public-read-write")
+        setBucketAcl(bucket, "private")
+        setBucketAcl(bucket, "public-read")
+        setBucketAcl(bucket, "public-read-write")
     rescue
         p $!
         exit(-1)
@@ -166,7 +170,7 @@ end
 def getObject(bucketName, key, path)
     printf("===== Get Object [%s/%s] Start =====\n", bucketName, key)
     res = $s3.get_object(
-        bucket: Bucket,
+        bucket: bucketName,
         key:    key
     )
     file = open(path)
@@ -195,7 +199,7 @@ end
 def rangeObject(bucketName, key, path, start, end_)
     printf("===== Range Get Object [%s/%s] (%d-%d) Start =====\n", bucketName, key, start, end_)
     res = $s3.get_object(
-        bucket: Bucket,
+        bucket: bucketName,
         key:    key,
         range:  "bytes="+start.to_s+"-"+end_.to_s
     )
