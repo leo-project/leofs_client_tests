@@ -9,7 +9,7 @@ use Aws\S3\Exception\NoSuchKeyException;
 use Guzzle\Http\EntityBody;
 use Guzzle\Http\ReadLimitEntityBody;
 
-define('HOST',  "unode05");
+define('HOST',  "localhost");
 define('PORT',  8080);
 
 define('ACCESS_KEY_ID', "05236");
@@ -80,6 +80,7 @@ try {
 
     // Delete All Object Test
     deleteAllObjects(BUCKET);
+    sleep(3);
     listObject(BUCKET, "", 0);
 
     // Multiple Page List Object Test
