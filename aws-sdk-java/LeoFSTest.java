@@ -18,6 +18,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
@@ -63,7 +64,9 @@ public class LeoFSTest {
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length > 0)
             signVer = args[0];
-        System.out.println(signVer);
+        if (args.length > 1)
+            bucket = args[1];
+        System.out.println(signVer + ", " + bucket);
         // Init
         init(signVer);
         createBucket(bucket);
@@ -116,6 +119,7 @@ public class LeoFSTest {
 
         // Delete All Object Test
         deleteAllObjects(bucket);
+        Thread.sleep(3000); // Need to wait for syncing directory metadata
         listObject(bucket, "", 0);
 
         // Multiple Page List Object Test
@@ -143,6 +147,9 @@ public class LeoFSTest {
         }
         credentials = new BasicAWSCredentials(accessKeyId, secretAccessKey);
         s3 = new AmazonS3Client(credentials, config);
+        S3ClientOptions opts = new S3ClientOptions();
+        opts.setPathStyleAccess(true);
+        s3.setS3ClientOptions(opts);
         System.out.println("----- Init End -----");
         System.out.println();
     }

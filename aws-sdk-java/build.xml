@@ -9,11 +9,13 @@
         <pathelement location="."/>
     </path>
     <property name="signver" value="v4" />
+    <property name="bucket" value="testj" />
 
     <target name="run">
         <javac srcdir="." destdir="." classpathref="aws.java.sdk.classpath"/>
         <java classname="LeoFSTest" classpathref="aws.java.sdk.classpath" fork="true">
             <arg value="${signver}"/>
+            <arg value="${bucket}"/>
         </java>
     </target>
 </project>
