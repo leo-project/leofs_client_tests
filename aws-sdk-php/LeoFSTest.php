@@ -25,76 +25,82 @@ define('LARGE_TEST_F', TEMP_DATA."testFile.large");
 $s3;    // S3 Client
 
 $signVer = SIGN_VER;
+$host = HOST;
+$port = PORT;
+$bucket = BUCKET;
 if ($argc > 1) {
    $signVer = $argv[1];
+   $host = $argv[2];
+   $port = intval($argv[3]);
+   $bucket = $argv[4];
 }
 
 try {
     init($signVer);
-    createBucket(BUCKET);
+    createBucket($bucket);
 
     // Put Object Test
-    putObject(BUCKET, "test.simple",    SMALL_TEST_F);
-    putObject(BUCKET, "test.medium",    MEDIUM_TEST_F);
-    putObject(BUCKET, "test.large",     LARGE_TEST_F);
+    putObject($bucket, "test.simple",    SMALL_TEST_F);
+    putObject($bucket, "test.medium",    MEDIUM_TEST_F);
+    putObject($bucket, "test.large",     LARGE_TEST_F);
 
     // Multipart Upload Test
-    mpObject(BUCKET, "test.simple.mp",  SMALL_TEST_F);
-    mpObject(BUCKET, "test.large.mp",   LARGE_TEST_F);
+    mpObject($bucket, "test.simple.mp",  SMALL_TEST_F);
+    mpObject($bucket, "test.large.mp",   LARGE_TEST_F);
 
     // Object Metadata Test
-    headObject(BUCKET, "test.simple",   SMALL_TEST_F);
-    headObject(BUCKET, "test.large",    LARGE_TEST_F);
+    headObject($bucket, "test.simple",   SMALL_TEST_F);
+    headObject($bucket, "test.large",    LARGE_TEST_F);
 // MP File ETag != MD5
-//    headObject(BUCKET, "test.simple.mp", SMALL_TEST_F);
-//    headObject(BUCKET, "test.large.mp", LARGE_TEST_F);
+//    headObject($bucket, "test.simple.mp", SMALL_TEST_F);
+//    headObject($bucket, "test.large.mp", LARGE_TEST_F);
 
     // Get Object Test
-    getObject(BUCKET, "test.simple",    SMALL_TEST_F);
-    getObject(BUCKET, "test.simple.mp", SMALL_TEST_F);
-    getObject(BUCKET, "test.medium",    MEDIUM_TEST_F);
-    getObject(BUCKET, "test.large",     LARGE_TEST_F);
-    getObject(BUCKET, "test.large.mp",  LARGE_TEST_F);
+    getObject($bucket, "test.simple",    SMALL_TEST_F);
+    getObject($bucket, "test.simple.mp", SMALL_TEST_F);
+    getObject($bucket, "test.medium",    MEDIUM_TEST_F);
+    getObject($bucket, "test.large",     LARGE_TEST_F);
+    getObject($bucket, "test.large.mp",  LARGE_TEST_F);
 
     // Get Object Again (Cache) Test
-    getObject(BUCKET, "test.simple",    SMALL_TEST_F);
-    getObject(BUCKET, "test.simple.mp", SMALL_TEST_F);
-    getObject(BUCKET, "test.medium",    MEDIUM_TEST_F);
-    getObject(BUCKET, "test.large",     LARGE_TEST_F);
+    getObject($bucket, "test.simple",    SMALL_TEST_F);
+    getObject($bucket, "test.simple.mp", SMALL_TEST_F);
+    getObject($bucket, "test.medium",    MEDIUM_TEST_F);
+    getObject($bucket, "test.large",     LARGE_TEST_F);
 
     // Get Not Exist Object Test
-    getNotExist(BUCKET, "test.noexist");
+    getNotExist($bucket, "test.noexist");
 
     // Range Get Object Test
-    rangeObject(BUCKET, "test.simple",      SMALL_TEST_F, 1, 4); 
-    rangeObject(BUCKET, "test.simple.mp",   SMALL_TEST_F, 1, 4); 
-    rangeObject(BUCKET, "test.large",       LARGE_TEST_F, 1048576, 10485760); 
-    rangeObject(BUCKET, "test.large.mp",    LARGE_TEST_F, 1048576, 10485760); 
+    rangeObject($bucket, "test.simple",      SMALL_TEST_F, 1, 4); 
+    rangeObject($bucket, "test.simple.mp",   SMALL_TEST_F, 1, 4); 
+    rangeObject($bucket, "test.large",       LARGE_TEST_F, 1048576, 10485760); 
+    rangeObject($bucket, "test.large.mp",    LARGE_TEST_F, 1048576, 10485760); 
 
     // Copy Object Test
-    copyObject(BUCKET, "test.simple", "test.simple.copy");
-    getObject(BUCKET, "test.simple.copy", SMALL_TEST_F);
+    copyObject($bucket, "test.simple", "test.simple.copy");
+    getObject($bucket, "test.simple.copy", SMALL_TEST_F);
 
     // List Object Test
-    listObject(BUCKET, "", -1);
+    listObject($bucket, "", -1);
 
     // Delete All Object Test
-    deleteAllObjects(BUCKET);
+    deleteAllObjects($bucket);
     sleep(3);
-    listObject(BUCKET, "", 0);
+    listObject($bucket, "", 0);
 
     // Multiple Page List Object Test
-    putDummyObjects(BUCKET, "list/", 35, SMALL_TEST_F);
+    putDummyObjects($bucket, "list/", 35, SMALL_TEST_F);
     sleep(3);
-    pageListBucket(BUCKET, "list/", 35, 10);
+    pageListBucket($bucket, "list/", 35, 10);
 
     // Multiple Delete
-    multiDelete(BUCKET, "list/", 10);
+    multiDelete($bucket, "list/", 10);
 
     // GET-PUT ACL
-    setBucketAcl(BUCKET, "private");
-    setBucketAcl(BUCKET, "public-read");
-    setBucketAcl(BUCKET, "public-read-write");
+    setBucketAcl($bucket, "private");
+    setBucketAcl($bucket, "public-read");
+    setBucketAcl($bucket, "public-read-write");
 } catch (\Aws\S3\Exception\S3Exception $e){
     // Exception messages
     print $e->getMessage();
@@ -104,12 +110,15 @@ try {
 
 function init($signVer) {
     global $s3;
+	global $host;
+	global $port;
+
     $options = array(
         "key"       => ACCESS_KEY_ID,
         "secret"    => SECRET_ACCESS_KEY,
         "region"    => Region::US_WEST_2,
         "scheme"    => "http",
-        "base_url"  => "http://".HOST.":".PORT
+        "base_url"  => "http://".$host.":".$port
     );
     if ($signVer == "v4") {
         $options["signature"] = $signVer;

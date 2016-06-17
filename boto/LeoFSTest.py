@@ -33,13 +33,18 @@ s3 = None
 
 def main():
     global SignVer
+    global Host
+    global Port
     global Bucket
+
     if len(sys.argv) > 1:
         SignVer = sys.argv[1]
     if len(sys.argv) > 2:
-        Bucket = sys.argv[2]
+        Host = sys.argv[2]
+        Port = int(sys.argv[3])
+        Bucket = sys.argv[4]
     try:
-        init(SignVer)
+        init(SignVer, Host, Port)
         createBucket(Bucket)
 
         # Put Object Test
@@ -105,7 +110,7 @@ def main():
     except Exception, e:
         print traceback.format_exc()
 
-def init(signVer):
+def init(signVer, Host, Port):
     global s3
     if signVer == "v4":
         boto.config.add_section('s3')

@@ -4,7 +4,7 @@ require "content_type"
 require 'logger'
 
 Host    = "localhost"
-Port    = 8080
+Port    = "8080"
 
 AccessKeyId     = "05236"
 SecretAccessKey = "802562235"
@@ -20,14 +20,18 @@ def main()
     # `bucket` can be configurable via the command argument
     bucket = "testr"
     signVer = SignVer
+	host = Host
+	port = Port
     if ARGV.length > 0
         signVer = ARGV[0]
     end
     if ARGV.length > 1
-        bucket = ARGV[1]
+		host = ARGV[1]
+		port = ARGV[2]
+        bucket = ARGV[3]
     end
     begin
-        init(signVer)
+        init(signVer, host ,port)
         createBucket(bucket)
 
         # Put Object Test
@@ -95,14 +99,14 @@ def main()
     end
 end
 
-def init(signVer) 
+def init(signVer, host, port) 
 
     options = {
-        endpoint: "http://"+Host+":"+Port.to_s,
+        endpoint: "http://"+host+":"+port,
         region: "us-west-2",
         access_key_id: AccessKeyId,
         secret_access_key: SecretAccessKey,
-        http_proxy: "http://"+Host+":"+Port.to_s,
+        http_proxy: "http://"+host+":"+port,
         compute_checksums: false,
         force_path_style: true,
     }

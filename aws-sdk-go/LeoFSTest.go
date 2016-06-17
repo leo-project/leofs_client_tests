@@ -9,18 +9,19 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-    "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-const (
+var (
 	Host = "localhost"
 	Port = 8080
 
@@ -30,20 +31,27 @@ const (
 	Bucket   = "testg"
 	TempData = "../temp_data/"
 
-	SmallTestF = TempData + "testFile"
-    MediumTestF = TempData + "testFile.medium"
-	LargeTestF = TempData + "testFile.large"
+	SmallTestF  = TempData + "testFile"
+	MediumTestF = TempData + "testFile.medium"
+	LargeTestF  = TempData + "testFile.large"
+
+	svc *s3.S3
 )
 
-var svc *s3.S3
-
 func main() {
+	if len(os.Args) > 1 {
+		//Sign = os.Args[1]
+		Host = os.Args[2]
+		Port, _ = strconv.Atoi(os.Args[3])
+		Bucket = os.Args[4]
+	}
+
 	initS3()
 	createBucket(Bucket)
 
 	// Put Object Test
 	putObject(Bucket, "test.simple", SmallTestF)
-    putObject(Bucket, "test.medium", MediumTestF)
+	putObject(Bucket, "test.medium", MediumTestF)
 	putObject(Bucket, "test.large", LargeTestF)
 
 	// Multipart Upload Object Test
@@ -105,7 +113,7 @@ func main() {
 func initS3() {
 	cred := credentials.NewStaticCredentials(AccessKeyId, SecretAccessKey, "")
 	svc = s3.New(session.New(), aws.NewConfig().
-        WithCredentials(cred).
+		WithCredentials(cred).
 		WithRegion("us-west-2").
 		WithEndpoint(fmt.Sprintf("http://%s:%d", Host, Port)).
 		WithLogLevel(0))

@@ -5,7 +5,7 @@
 -include_lib("deps/erlcloud/include/erlcloud_aws.hrl").
 
 -define(HOST,       "localhost").
--define(PORT,       8080).
+-define(PORT,       "8080").
 
 -define(ACCESS_KEY_ID       , "05236").
 -define(SECRET_ACCESS_KEY   , "802562235").
@@ -20,7 +20,7 @@
 
 -define(CHUNK_SIZE,     10485760).
 
-main(_Args)->
+main(Args)->
     ok = code:add_paths(["ebin",
                          "deps/idna/ebin",
                          "deps/mimerl/ebin",
@@ -33,85 +33,91 @@ main(_Args)->
                          "deps/meck/ebin",
                          "deps/lhttpc/ebin",
                          "deps/leo_commons/ebin/"]),
+    [SignVer, Host, Port_S, Bucket] = case length(Args) of
+                                          0 ->
+                                              [?SIGN_VER, ?HOST, ?PORT, ?BUCKET];
+                                          _ ->
+                                              Args
+                                      end,
     hackney:start(),
     erlcloud:start(),
 
-    SignVer = ?SIGN_VER,
-    init(SignVer),
-    createBucket(?BUCKET),
+    Port = list_to_integer(Port_S),
+    init(SignVer, Host, Port),
+    createBucket(Bucket),
 
     %% Put Object Test
-    putObject(?BUCKET, "test.simple",    ?SMALL_TEST_F),
-    putObject(?BUCKET, "test.medium",    ?MEDIUM_TEST_F),
-    putObject(?BUCKET, "test.large",     ?LARGE_TEST_F),
+    putObject(Bucket, "test.simple",    ?SMALL_TEST_F),
+    putObject(Bucket, "test.medium",    ?MEDIUM_TEST_F),
+    putObject(Bucket, "test.large",     ?LARGE_TEST_F),
 
     %% Multipart Upload Test
-    mpObject(?BUCKET, "test.simple.mp",  ?SMALL_TEST_F),
-    mpObject(?BUCKET, "test.large.mp",   ?LARGE_TEST_F),
+    mpObject(Bucket, "test.simple.mp",  ?SMALL_TEST_F),
+    mpObject(Bucket, "test.large.mp",   ?LARGE_TEST_F),
 
     %% Object Metadata Test
-    headObject(?BUCKET, "test.simple",   ?SMALL_TEST_F),
-    headObject(?BUCKET, "test.large",    ?LARGE_TEST_F),
+    headObject(Bucket, "test.simple",   ?SMALL_TEST_F),
+    headObject(Bucket, "test.large",    ?LARGE_TEST_F),
 %% MP File ETag != MD5
-%%    headObject(?BUCKET, "test.simple.mp", ?SMALL_TEST_F),
-%%    headObject(?BUCKET, "test.large.mp", ?LARGE_TEST_F),
+%%    headObject(Bucket, "test.simple.mp", ?SMALL_TEST_F),
+%%    headObject(Bucket, "test.large.mp", ?LARGE_TEST_F),
 
     %% Get Object Test
-    getObject(?BUCKET, "test.simple",    ?SMALL_TEST_F),
-    getObject(?BUCKET, "test.simple.mp", ?SMALL_TEST_F),
-    getObject(?BUCKET, "test.medium",    ?MEDIUM_TEST_F),
-    getObject(?BUCKET, "test.large",     ?LARGE_TEST_F),
-    getObject(?BUCKET, "test.large.mp",  ?LARGE_TEST_F),
+    getObject(Bucket, "test.simple",    ?SMALL_TEST_F),
+    getObject(Bucket, "test.simple.mp", ?SMALL_TEST_F),
+    getObject(Bucket, "test.medium",    ?MEDIUM_TEST_F),
+    getObject(Bucket, "test.large",     ?LARGE_TEST_F),
+    getObject(Bucket, "test.large.mp",  ?LARGE_TEST_F),
 
     %% Get Object Again (Cache) Test
-    getObject(?BUCKET, "test.simple",    ?SMALL_TEST_F),
-    getObject(?BUCKET, "test.simple.mp", ?SMALL_TEST_F),
-    getObject(?BUCKET, "test.medium",    ?MEDIUM_TEST_F),
-    getObject(?BUCKET, "test.large",     ?LARGE_TEST_F),
+    getObject(Bucket, "test.simple",    ?SMALL_TEST_F),
+    getObject(Bucket, "test.simple.mp", ?SMALL_TEST_F),
+    getObject(Bucket, "test.medium",    ?MEDIUM_TEST_F),
+    getObject(Bucket, "test.large",     ?LARGE_TEST_F),
 
     %% Get Not Exist Object Test
-    getNotExist(?BUCKET, "test.noexist"),
+    getNotExist(Bucket, "test.noexist"),
 
     %% Range Get Object Test
-    rangeObject(?BUCKET, "test.simple",      ?SMALL_TEST_F, 1, 4), 
-    rangeObject(?BUCKET, "test.simple.mp",   ?SMALL_TEST_F, 1, 4), 
-    rangeObject(?BUCKET, "test.large",       ?LARGE_TEST_F, 1048576, 10485760), 
-    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 1048576, 10485760),
-    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 31457280, 41943040),
-    rangeObject(?BUCKET, "test.large.mp",    ?LARGE_TEST_F, 41943040, 52420000),
+    rangeObject(Bucket, "test.simple",      ?SMALL_TEST_F, 1, 4), 
+    rangeObject(Bucket, "test.simple.mp",   ?SMALL_TEST_F, 1, 4), 
+    rangeObject(Bucket, "test.large",       ?LARGE_TEST_F, 1048576, 10485760), 
+    rangeObject(Bucket, "test.large.mp",    ?LARGE_TEST_F, 1048576, 10485760),
+    rangeObject(Bucket, "test.large.mp",    ?LARGE_TEST_F, 31457280, 41943040),
+    rangeObject(Bucket, "test.large.mp",    ?LARGE_TEST_F, 41943040, 52420000),
 
     %% Copy Object Test
-    copyObject(?BUCKET, "test.simple", "test.simple.copy"),
-    getObject(?BUCKET, "test.simple.copy", ?SMALL_TEST_F),
+    copyObject(Bucket, "test.simple", "test.simple.copy"),
+    getObject(Bucket, "test.simple.copy", ?SMALL_TEST_F),
 
     %% List Object Test
-    listObject(?BUCKET, [], -1),
+    listObject(Bucket, [], -1),
 
     %% Delete All Object Test
-    deleteAllObjects(?BUCKET),
-    listObject(?BUCKET, [], 0),
+    deleteAllObjects(Bucket),
+    listObject(Bucket, [], 0),
 
     %% Multiple Page List Object Test
-    putDummyObjects(?BUCKET, "list/", 35, ?SMALL_TEST_F),
-    pageListBucket(?BUCKET, "list/", 35, 10),
+    putDummyObjects(Bucket, "list/", 35, ?SMALL_TEST_F),
+    pageListBucket(Bucket, "list/", 35, 10),
 
 %% erlcloud does not have config for delete_objects_batch
 %%    %% Multiple Delete
-%%    multiDelete(?BUCKET, "list/", 10),
+%%    multiDelete(Bucket, "list/", 10),
 
 %% erlcloud does not support Canned ACL
 %%    %% GET-PUT ACL
-%%    setBucketAcl(?BUCKET, "private"),
-%%    setBucketAcl(?BUCKET, "public-read"),
-%%    setBucketAcl(?BUCKET, "public-read-write"),
+%%    setBucketAcl(Bucket, "private"),
+%%    setBucketAcl(Bucket, "public-read"),
+%%    setBucketAcl(Bucket, "public-read-write"),
     ok.
 
-init(_SignVer) ->
+init(_SignVer, Host, Port) ->
     Conf = erlcloud_s3:new(
              ?ACCESS_KEY_ID,
              ?SECRET_ACCESS_KEY,
-             ?HOST,
-             ?PORT),
+             Host,
+             Port),
     Conf2 = Conf#aws_config{s3_scheme = "http://", http_client = hackney},
     put(s3, Conf2).
 

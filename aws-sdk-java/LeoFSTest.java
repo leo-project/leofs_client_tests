@@ -64,8 +64,11 @@ public class LeoFSTest {
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length > 0)
             signVer = args[0];
-        if (args.length > 1)
-            bucket = args[1];
+        if (args.length > 1) {
+			host = args[1];
+			port = Integer.parseInt(args[2]);
+            bucket = args[3];
+		}
         System.out.println(signVer + ", " + bucket);
         // Init
         init(signVer);

@@ -7,11 +7,19 @@
         <pathelement location="."/>
     </path>
 
+    <property name="signver" value="v4" />
+	<property name="host" value="localhost" />
+	<property name="port" value="8080" />
+    <property name="bucket" value="testj" />
+
     <target name="run">
         <javac srcdir="." destdir="." classpathref="jclouds.java.sdk.classpath"/>
         <!--<java classname="Sample" classpathref="jclouds.java.sdk.classpath" fork="true">-->
         <java classname="LeoFSTest" classpathref="jclouds.java.sdk.classpath" >
-             <arg line="s3 05236 802562235 jclouds-test"/>
+            <arg value="${signver}"/>
+			<arg value="${host}" />
+			<arg value="${port}" />
+            <arg value="${bucket}"/>
         </java>
     </target>
 </project>

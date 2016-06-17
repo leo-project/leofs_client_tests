@@ -6,33 +6,11 @@ Generate Test Data with
 $ cd temp_data; ./gen.sh
 ```
 
-### Java - aws-sdk-java
-#### Execute the test-case
-
+### Command Format
 ```bash
-$ cd aws-sdk-java
-$ ant -Dsignver=v4
-or
-$ ant -Dsignver=v2
+$ tester [SIGNATURE_VERSION] [HOST] [PORT] [BUCKET]
 ```
-
-### PHP - aws-sdk-php
-#### Install the libraries
-
-```bash
-$ cd aws-sdk-php
-$ curl -sS https://getcomposer.org/installer | php
-$ php composer.phar install
-```
-
-#### Execute the test-case
-
-```bash
-$ cd aws-sdk-php
-$ php LeoFSTest.php v4
-or
-$ php LeoFSTest.php v2
-```
+Note that some libraries only support v2/v4 signature
 
 ### GO - aws-sdk-go
 #### Install the libraries
@@ -48,7 +26,35 @@ $ go get github.com/aws/aws-sdk-go/service/s3
 
 ```bash
 $ cd aws-sdk-go
-$ go run LeoFSTest.go
+$ go run LeoFSTest.go v4 localhost 8080 testg
+```
+
+### Java - aws-sdk-java
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-java
+$ ant -Dsignver=v4 -Dhost="localhost" -Dport=8080 -Dbucket="testj"
+or
+$ ant -Dsignver=v2 -Dhost="localhost" -Dport=8080 -Dbucket="testj"
+```
+
+### PHP - aws-sdk-php
+#### Install the libraries
+
+```bash
+$ cd aws-sdk-php
+$ curl -sS https://getcomposer.org/installer | php
+$ php composer.phar install
+```
+
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-php
+$ php LeoFSTest.php v4 localhost 8080 testp
+or
+$ php LeoFSTest.php v2 localhost 8080 testp
 ```
 
 ### Ruby - aws-sdk-ruby
@@ -77,9 +83,9 @@ $ sudo gem install content_type
 
 ```bash
 $ cd aws-sdk-ruby
-$ ruby LeoFSTest.rb v4
+$ ruby LeoFSTest.rb v4 localhost 8080 testr
 or
-$ ruby LeoFSTest.rb v2
+$ ruby LeoFSTest.rb v2 localhost 8080 testr
 ``` 
 
 ### Python - boto
@@ -93,9 +99,9 @@ $ sudo pip install filechunkio
 #### Execute the test-case
 
 ```bash
-$ python LeoFSTest.py v4
+$ python LeoFSTest.py v4 localhost 8080 testb
 or
-$ python LeoFSTest.py v2
+$ python LeoFSTest.py v2 localhost 8080 testb
 ```
 
 ### Erlang - erlcloud
@@ -107,7 +113,7 @@ $ make
 
 #### Execute the test-case
 ```bash
-$ ./LeoFSTest.erl
+$ ./LeoFSTest.erl v2 localhost 8080 teste
 ```
 
 #### Java - jclouds
@@ -119,5 +125,5 @@ $ mvn dependency:copy-dependencies
 
 #### Execute the test-case
 ```bash
-$ ant
+$ ant -Dsignver=v2 -Dhost="localhost" -Dport=8080 -Dbucket="testj"
 ```
