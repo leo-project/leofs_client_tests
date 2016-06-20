@@ -109,6 +109,7 @@ def main():
 
     except Exception, e:
         print traceback.format_exc()
+        sys.exit(-1)
 
 def init(signVer, Host, Port):
     global s3

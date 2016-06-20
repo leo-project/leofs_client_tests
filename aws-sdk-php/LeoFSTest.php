@@ -104,8 +104,10 @@ try {
 } catch (\Aws\S3\Exception\S3Exception $e){
     // Exception messages
     print $e->getMessage();
+	exit(1);
 } catch (Exception $e) {
     print $e->getMessage();
+	exit(1);
 }
 
 function init($signVer) {

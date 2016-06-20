@@ -1,26 +1,26 @@
 <!-- Ant build script for compiling and running the AWS Java SDK S3 sample.
-     Don't forget to fill in your AWS access credentials in AwsCredentials.properties
-     before trying to run it.  -->
+	 Don't forget to fill in your AWS access credentials in AwsCredentials.properties
+	 before trying to run it.  -->
 <project name="Amazon S3 Sample" default="run" basedir=".">
-    <path id="aws.java.sdk.classpath">
-        <fileset dir="./third-party" includes="**/*.jar"/>
-        <fileset dir="./lib" includes="**/*.jar"/>
-        <fileset dir="./extras" includes="**/*.jar"/>
-        <pathelement location="."/>
-    </path>
+	<path id="aws.java.sdk.classpath">
+		<fileset dir="./third-party" includes="**/*.jar"/>
+		<fileset dir="./lib" includes="**/*.jar"/>
+		<fileset dir="./extras" includes="**/*.jar"/>
+		<pathelement location="."/>
+	</path>
 
-    <property name="signver" value="v4" />
+	<property name="signver" value="v4" />
 	<property name="host" value="localhost" />
 	<property name="port" value="8080" />
-    <property name="bucket" value="testj" />
+	<property name="bucket" value="testj" />
 
-    <target name="run">
-        <javac srcdir="." destdir="." classpathref="aws.java.sdk.classpath"/>
-        <java classname="LeoFSTest" classpathref="aws.java.sdk.classpath" fork="true">
-            <arg value="${signver}"/>
+	<target name="run">
+		<javac srcdir="." destdir="." classpathref="aws.java.sdk.classpath"/>
+		<java classname="LeoFSTest" classpathref="aws.java.sdk.classpath" fork="true" failonerror="true">
+			<arg value="${signver}"/>
 			<arg value="${host}" />
 			<arg value="${port}" />
-            <arg value="${bucket}"/>
-        </java>
-    </target>
+			<arg value="${bucket}"/>
+		</java>
+	</target>
 </project>

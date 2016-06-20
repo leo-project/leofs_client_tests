@@ -14,8 +14,7 @@
 
     <target name="run">
         <javac srcdir="." destdir="." classpathref="jclouds.java.sdk.classpath"/>
-        <!--<java classname="Sample" classpathref="jclouds.java.sdk.classpath" fork="true">-->
-        <java classname="LeoFSTest" classpathref="jclouds.java.sdk.classpath" >
+        <java classname="LeoFSTest" classpathref="jclouds.java.sdk.classpath" fork="true" failonerror="true">
             <arg value="${signver}"/>
 			<arg value="${host}" />
 			<arg value="${port}" />
