@@ -35,6 +35,10 @@ var (
 	MediumTestF = TempData + "testFile.medium"
 	LargeTestF  = TempData + "testFile.large"
 
+	MetadataKey = "cmeta_key"
+	MetadataVal = "cmeta_val"
+	MetadataMap = map[string]*string{MetadataKey: &MetadataVal}
+
 	svc *s3.S3
 )
 
@@ -54,9 +58,16 @@ func main() {
 	putObject(Bucket, "test.medium", MediumTestF)
 	putObject(Bucket, "test.large", LargeTestF)
 
+	// Put Object with Metadata Test
+	putObjectWithMetadata(Bucket, "test.simple.meta", SmallTestF, MetadataMap)
+	putObjectWithMetadata(Bucket, "test.large.meta", LargeTestF, MetadataMap)
+
 	// Multipart Upload Object Test
 	mpObject(Bucket, "test.simple.mp", SmallTestF)
 	mpObject(Bucket, "test.large.mp", LargeTestF)
+
+	// Multipart Upload Object with Metadata Test
+	mpObjectWithMeta(Bucket, "test.large.mp.meta", LargeTestF, MetadataMap)
 
 	// Head Object Test
 	headObject(Bucket, "test.simple", SmallTestF)
@@ -75,6 +86,11 @@ func main() {
 	getObject(Bucket, "test.simple.mp", SmallTestF)
 	getObject(Bucket, "test.medium", MediumTestF)
 	getObject(Bucket, "test.large", LargeTestF)
+
+	// Get Object with Metadata Test
+	getObjectWithMetadata(Bucket, "test.simple.meta", SmallTestF, MetadataMap)
+	getObjectWithMetadata(Bucket, "test.large.meta", LargeTestF, MetadataMap)
+	getObjectWithMetadata(Bucket, "test.large.mp.meta", LargeTestF, MetadataMap)
 
 	// Get Not Exist Object Test
 	getNotExist(Bucket, "test.noexist")
@@ -141,6 +157,7 @@ func putObject(bucketName, key, path string) {
 		Key:    keyStr,
 		Body:   reader,
 	})
+
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -148,6 +165,33 @@ func putObject(bucketName, key, path string) {
 		log.Fatalf("Put Object [%s/%s] Failed!\n", bucketName, key)
 	}
 	log.Println("===== Put Object End =====")
+	log.Println()
+}
+
+func putObjectWithMetadata(bucketName, key, path string, meta_map map[string]*string) {
+	log.Printf("===== Put Object [%s/%s] with Metadata Start =====\n", bucketName, key)
+	log.Printf("Metadata:\n")
+	for key, val := range meta_map {
+		log.Printf("  %s : %s\n", key, *val)
+	}
+	bucketStr := aws.String(bucketName)
+	keyStr := aws.String(key)
+	reader, _ := os.Open(path)
+	defer reader.Close()
+	_, err := svc.PutObject(&s3.PutObjectInput{
+		Bucket:   bucketStr,
+		Key:      keyStr,
+		Body:     reader,
+		Metadata: meta_map,
+	})
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if !doesFileExist(bucketName, key) {
+		log.Fatalf("Put Object [%s/%s] Failed!\n", bucketName, key)
+	}
+	log.Println("===== Put Object with Metadata End =====")
 	log.Println()
 }
 
@@ -172,6 +216,29 @@ func mpObject(bucketName, key, path string) {
 	log.Println("===== Multipart Upload Object End =====")
 	log.Println()
 
+}
+
+func mpObjectWithMeta(bucketName, key, path string, meta_map map[string]*string) {
+	log.Printf("===== Multipart Upload Object [%s/%s] Start =====\n", bucketName, key)
+	bucketStr := aws.String(bucketName)
+	keyStr := aws.String(key)
+	reader, _ := os.Open(path)
+	defer reader.Close()
+	uploader := s3manager.NewUploaderWithClient(svc)
+	_, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket:   bucketStr,
+		Key:      keyStr,
+		Body:     reader,
+		Metadata: meta_map,
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if !doesFileExist(bucketName, key) {
+		log.Fatalf("Multipart Upload Object [%s/%s] Failed!\n", bucketName, key)
+	}
+	log.Println("===== Multipart Upload Object End =====")
+	log.Println()
 }
 
 func headObject(bucketName, key, path string) {
@@ -221,6 +288,32 @@ func getObject(bucketName, key, path string) {
 	reader, _ := os.Open(path)
 	if !doesFileMatch(reader, res.Body) {
 		log.Fatalln("Content NOT Match!")
+	}
+	log.Println("===== Get Object End =====")
+	log.Println()
+}
+
+func getObjectWithMetadata(bucketName, key, path string, meta_map map[string]*string) {
+	log.Printf("===== Get Object [%s/%s] with Metadata Start =====\n", bucketName, key)
+	bucketStr := aws.String(bucketName)
+	keyStr := aws.String(key)
+	res, err := svc.GetObject(&s3.GetObjectInput{
+		Bucket: bucketStr,
+		Key:    keyStr,
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+	reader, _ := os.Open(path)
+	if !doesFileMatch(reader, res.Body) {
+		log.Fatalln("Content NOT Match!")
+	}
+	log.Printf("Metadata:\n")
+	for key, val := range res.Metadata {
+		log.Printf("  %s : %s\n", key, *val)
+		if val_r, ok := meta_map[key]; !ok || *val != *val_r {
+			log.Fatalln("Metadata NOT Match!")
+		}
 	}
 	log.Println("===== Get Object End =====")
 	log.Println()

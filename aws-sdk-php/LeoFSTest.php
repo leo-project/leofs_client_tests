@@ -22,6 +22,9 @@ define('SMALL_TEST_F', TEMP_DATA."testFile");
 define('MEDIUM_TEST_F', TEMP_DATA."testFile.medium");
 define('LARGE_TEST_F', TEMP_DATA."testFile.large");
 
+define('METADATA_KEY', "cmeta_key");
+define('METADATA_VAL', "cmeta_val");
+
 $s3;    // S3 Client
 
 $signVer = SIGN_VER;
@@ -36,6 +39,8 @@ if ($argc > 1) {
 }
 
 try {
+    $metadataMap = [METADATA_KEY => METADATA_VAL];
+
     init($signVer);
     createBucket($bucket);
 
@@ -47,6 +52,10 @@ try {
     // Multipart Upload Test
     mpObject($bucket, "test.simple.mp",  SMALL_TEST_F);
     mpObject($bucket, "test.large.mp",   LARGE_TEST_F);
+
+	// Put Object with Metadata Test
+    putObjectWithMetadata($bucket, "test.simple.meta", SMALL_TEST_F, $metadataMap);
+	putObjectWithMetadata($bucket, "test.large.meta", LARGE_TEST_F, $metadataMap);
 
     // Object Metadata Test
     headObject($bucket, "test.simple",   SMALL_TEST_F);
@@ -67,6 +76,10 @@ try {
     getObject($bucket, "test.simple.mp", SMALL_TEST_F);
     getObject($bucket, "test.medium",    MEDIUM_TEST_F);
     getObject($bucket, "test.large",     LARGE_TEST_F);
+
+    // Get Object with Metadata Test
+    getObjectWithMetadata($bucket, "test.simple.meta", SMALL_TEST_F, $metadataMap);
+	getObjectWithMetadata($bucket, "test.large.meta", LARGE_TEST_F, $metadataMap);
 
     // Get Not Exist Object Test
     getNotExist($bucket, "test.noexist");
@@ -153,6 +166,22 @@ function putObject($bucketName, $key, $path) {
     print "\n";
 }
 
+function putObjectWithMetadata($bucketName, $key, $path, $meta_map) {
+    global $s3;
+    printf("===== Put Object [%s/%s] with Metadata Start =====\n", $bucketName, $key);
+    $s3->putObject(array(
+        "Bucket"    => $bucketName,
+        "Key"       => $key,
+        "Body"      => fopen($path, "r"),
+        "Metadata"  => $meta_map
+    ));
+    if (!$s3->doesObjectExist($bucketName, $key)) {
+        throw new Exception(sprintf("Put Object [%s/%s] with Metadata Failed!\n", $bucketName, $key));
+    }
+    print "===== Put Object with Metadata End =====\n";
+    print "\n";
+}
+
 function mpObject($bucketName, $key, $path) {
     global $s3;
     printf("===== Multipart Upload Object [%s/%s] Start =====\n", $bucketName, $key);
@@ -200,6 +229,28 @@ function getObject($bucketName, $key, $path) {
         throw new Exception("Content NOT Match!\n");
     }
     print "===== Get Object End =====\n";
+    print "\n";
+    return $res;
+}
+
+function getObjectWithMetadata($bucketName, $key, $path, $meta_map) {
+    global $s3;
+    printf("===== Get Object [%s/%s] with Metadata Start =====\n", $bucketName, $key);
+    $res = $s3->getObject(array(
+        "Bucket"    => $bucketName,
+        "Key"       => $key
+    ));
+    $content = $res["Body"];
+    $meta = $res["Metadata"];
+    if ($meta != $meta_map) {
+        throw new Exception("Metadata NOT Match!\n");
+    }
+    $content->rewind();
+    $file = EntityBody::factory(fopen($path, "r"));
+    if (!doesFileMatch($content, $file)) {
+        throw new Exception("Content NOT Match!\n");
+    }
+    print "===== Get Object with Metadata End =====\n";
     print "\n";
     return $res;
 }

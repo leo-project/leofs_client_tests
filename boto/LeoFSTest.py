@@ -29,6 +29,10 @@ SmallTestF  = TempData + "testFile"
 MediumTestF = TempData + "testFile.medium"
 LargeTestF  = TempData + "testFile.large"
 
+MetadataKey = "cmeta_key"
+MetadataVal = "cmeta_val"
+MetadataMap = {MetadataKey : MetadataVal}
+
 s3 = None
 
 def main():
@@ -52,6 +56,10 @@ def main():
         putObject(Bucket, "test.medium",    MediumTestF)
         putObject(Bucket, "test.large",     LargeTestF)
     
+        # Put Object with Metadata Test
+        putObjectWithMeta(Bucket, "test.simple.meta", SmallTestF, MetadataMap)
+        putObjectWithMeta(Bucket, "test.large.meta", LargeTestF, MetadataMap)
+
 #        # Multipart Upload Object Test
 #        mpObject(Bucket, "test.simple.mp",  SmallTestF)
 #        mpObject(Bucket, "test.large.mp",   LargeTestF)
@@ -72,6 +80,10 @@ def main():
         getObject(Bucket, "test.simple",    SmallTestF)
         getObject(Bucket, "test.medium",    MediumTestF)
         getObject(Bucket, "test.large",     LargeTestF)
+
+        # Get Object with Metadata Test
+        getObjectWithMetadata(Bucket, "test.simple.meta", SmallTestF, MetadataMap)
+        getObjectWithMetadata(Bucket, "test.large.meta", LargeTestF, MetadataMap)
 
         # Get Not Exist Object Test
         getNotExist(Bucket, "test.noexist")
@@ -141,6 +153,18 @@ def putObject(bucketName, key, path):
     print "===== Put Object End ====="
     print
 
+def putObjectWithMeta(bucketName, key, path, meta_map):
+    print "===== Put Object [%s/%s] with Metadata Start =====" % (bucketName, key)
+    bucket = s3.get_bucket(bucketName, validate=False)
+    obj = bucket.new_key(key)
+    for mkey, val in meta_map.items():
+        obj.set_metadata(mkey, val)
+    obj.set_contents_from_filename(path)
+    if not doesFileExist(bucketName, key):
+        raise ValueError("Put Object [%s/%s] with Metadata Failed!" % (bucketName, key))
+    print "===== Put Object with Metadata End ====="
+    print
+
 def mpObject(bucketName, key, path):
     print "===== Multipart Upload Object [%s/%s] Start =====" % (bucketName, key)
     bucket = s3.get_bucket(bucketName, validate=False)
@@ -188,6 +212,19 @@ def getObject(bucketName, key, path):
     if not doesFileMatch(file, obj):
         raise ValueError("Content NOT Match!")
     print "===== Get Object End ====="
+    print
+
+def getObjectWithMetadata(bucketName, key, path, meta_map):
+    print "===== Get Object [%s/%s] with Metadata Start =====" % (bucketName, key)
+    bucket = s3.get_bucket(bucketName, validate=False)
+    obj = bucket.get_key(key)
+    for mkey, val in meta_map.items():
+        if obj.get_metadata(mkey) != val:
+            raise ValueError("Metadata NOT Match!")
+    file = open(path)
+    if not doesFileMatch(file, obj):
+        raise ValueError("Content NOT Match!")
+    print "===== Get Object with Metadata End ====="
     print
 
 def getNotExist(bucketName, key):

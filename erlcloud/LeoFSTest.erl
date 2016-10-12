@@ -18,6 +18,9 @@
 -define(MEDIUM_TEST_F   , ?TEMPDATA++"testFile.medium").
 -define(LARGE_TEST_F    , ?TEMPDATA++"testFile.large").
 
+-define(METADATA_KEY    , "cmeta_key").
+-define(METADATA_VAL    , "cmeta_val").
+
 -define(CHUNK_SIZE,     10485760).
 
 main(Args)->
@@ -42,6 +45,7 @@ main(Args)->
     hackney:start(),
     erlcloud:start(),
 
+    MetadataMap = [{?METADATA_KEY, ?METADATA_VAL}],
     Port = list_to_integer(Port_S),
     init(SignVer, Host, Port),
     createBucket(Bucket),
@@ -51,6 +55,10 @@ main(Args)->
     putObject(Bucket, "test.medium",    ?MEDIUM_TEST_F),
     putObject(Bucket, "test.large",     ?LARGE_TEST_F),
 
+    %% Put Object with Metadata Test
+    putObjectWithMetadata(Bucket, "test.simple.meta", ?SMALL_TEST_F, MetadataMap),
+    putObjectWithMetadata(Bucket, "test.large.meta", ?LARGE_TEST_F, MetadataMap),
+    
     %% Multipart Upload Test
     mpObject(Bucket, "test.simple.mp",  ?SMALL_TEST_F),
     mpObject(Bucket, "test.large.mp",   ?LARGE_TEST_F),
@@ -75,6 +83,10 @@ main(Args)->
     getObject(Bucket, "test.medium",    ?MEDIUM_TEST_F),
     getObject(Bucket, "test.large",     ?LARGE_TEST_F),
 
+    %% Get Object with Metadata Test
+    getObjectWithMetadata(Bucket, "test.simple.meta", ?SMALL_TEST_F, MetadataMap),
+    getObjectWithMetadata(Bucket, "test.large.meta", ?LARGE_TEST_F, MetadataMap),
+    
     %% Get Not Exist Object Test
     getNotExist(Bucket, "test.noexist"),
 
@@ -137,13 +149,31 @@ putObject(BucketName, Key, Path) ->
 
     case doesObjectExist(BucketName, Key) of
         false ->
-           io:format("Multipart Upload Object [~s/~s] Failed!\n", [BucketName, Key]),
+           io:format("Put Object [~s/~s] Failed!\n", [BucketName, Key]),
            throw(error);
         true ->
             ok
     end,
 
     io:format("===== Put Object End =====\n"),
+    io:format("\n"),
+    ok.
+
+putObjectWithMetadata(BucketName, Key, Path, MetaMap) ->
+    Conf = get(s3),
+    io:format("===== Put Object [~s/~s] with Metadata Start =====\n", [BucketName, Key]),
+    {ok, Bin} = file:read_file(Path),
+    erlcloud_s3:put_object(BucketName, Key, Bin, [{meta, MetaMap}], Conf),
+
+    case doesObjectExist(BucketName, Key) of
+        false ->
+           io:format("Put Object [~s/~s] with Metadata Failed!\n", [BucketName, Key]),
+           throw(error);
+        true ->
+            ok
+    end,
+
+    io:format("===== Put Object with Metadata End =====\n"),
     io:format("\n"),
     ok.
 
@@ -201,6 +231,25 @@ getObject(BucketName, Key, Path) ->
            throw(error)
     end,
     io:format("===== Get Object End =====\n"),
+    io:format("\n"),
+    ok.
+
+getObjectWithMetadata(BucketName, Key, Path, MetaMap) ->
+    Conf = get(s3),
+    io:format("===== Get Object [~s/~s] with Metadata Start =====\n", [BucketName, Key]),
+    Obj = erlcloud_s3:get_object(BucketName, Key, Conf),
+    lists:foreach(fun({MKey, Val}) ->
+                          Val = proplists:get_value("x-amz-meta-" ++ MKey, Obj)
+                  end, MetaMap),
+    Content = proplists:get_value(content, Obj),
+    {ok, Bin} = file:read_file(Path),
+    if Content =:= Bin ->
+           ok;
+       true ->
+           io:format("Content NOT Match!\n"),
+           throw(error)
+    end,
+    io:format("===== Get Object with Metadata End =====\n"),
     io:format("\n"),
     ok.
 

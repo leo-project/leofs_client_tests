@@ -8,6 +8,8 @@ import java.util.Properties;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.jclouds.ContextBuilder;
 import org.jclouds.s3.domain.ObjectMetadata;
@@ -52,6 +54,11 @@ public class LeoFSTest {
     private static final String smallTestF  = tempData + "testFile";
     private static final String mediumTestF = tempData + "testFile.medium";
     private static final String largeTestF  = tempData + "testFile.large"; 
+
+    private static String metadataKey = "cmeta_key";
+    private static String metadataVal = "cmeta_val";
+    private static Map<String, String> metadataMap;
+    
     private static BlobStore s3;
     private static BlobStoreContext s3c;
 
@@ -73,6 +80,10 @@ public class LeoFSTest {
         putObject(bucket, "test.simple",    smallTestF);
         putObject(bucket, "test.medium",    mediumTestF);
         putObject(bucket, "test.large",     largeTestF);
+
+        // Put Object with Metadata Test
+        putObjectWithMetadata(bucket, "test.simple.meta", smallTestF, metadataMap);
+        putObjectWithMetadata(bucket, "test.large.meta", largeTestF, metadataMap);
 
         // Multipart Upload Test
         mpObject(bucket, "test.simple.mp",  smallTestF);
@@ -97,6 +108,10 @@ public class LeoFSTest {
         getObject(bucket, "test.simple.mp", smallTestF);
         getObject(bucket, "test.medium",    mediumTestF);
         getObject(bucket, "test.large",     largeTestF);
+
+        // Get Object with Metadata Test
+        getObjectWithMetadata(bucket, "test.simple.meta", smallTestF, metadataMap);
+        getObjectWithMetadata(bucket, "test.large.meta", largeTestF, metadataMap);
 
         // Get Not Exist Object Test
         getNotExist(bucket, "test.noexist");
@@ -141,6 +156,7 @@ public class LeoFSTest {
     }
 
     private static void init(String signVer) {
+        System.out.println("----- Init Start -----");
         Properties overrides = new Properties();
         overrides.setProperty("jclouds.s3.virtual-host-buckets", "false");
         s3c = ContextBuilder.newBuilder("aws-s3")
@@ -148,7 +164,11 @@ public class LeoFSTest {
             .endpoint("http://" + host + ":" + port)
             .overrides(overrides)
             .buildView(BlobStoreContext.class);
+        metadataMap = new HashMap();
+        metadataMap.put(metadataKey, metadataVal);
         s3 = s3c.getBlobStore();
+        System.out.println("----- Init End -----");
+        System.out.println();
     }
 
     public static void createBucket(String bucketName) throws IOException {
@@ -172,6 +192,18 @@ public class LeoFSTest {
         s3.putBlob(bucketName, blob);
     }
 
+    private static void doPutObject(String bucketName, String key, String path, Map<String, String> meta_map) throws IOException {
+        File file = new File(path);
+        ByteSource byteSource = Files.asByteSource(file);
+        Payload payload = Payloads.newByteSourcePayload(byteSource);
+        Blob blob = s3.blobBuilder(key)
+            .payload(payload)
+            .contentLength(byteSource.size())
+            .userMetadata(meta_map)
+            .build();
+        s3.putBlob(bucketName, blob);
+    }
+
     public static void putObject(String bucketName, String key, String path) throws IOException {
         System.out.println("===== Put Object [" + bucketName + "/" + key + "] Start =====");
         doPutObject(bucketName, key, path);
@@ -179,6 +211,16 @@ public class LeoFSTest {
             throw new IOException("Put Object [" + bucketName + "/" + key + "] Failed!");
         }
         System.out.println("===== Put Object End =====");
+        System.out.println();
+    }
+
+    public static void putObjectWithMetadata(String bucketName, String key, String path, Map<String, String> meta_map) throws IOException {
+        System.out.println("===== Put Object [" + bucketName + "/" + key + "] with Metadata Start =====");
+        doPutObject(bucketName, key, path, meta_map);
+        if (!doesFileExist(bucketName, key)) {
+            throw new IOException("Put Object [" + bucketName + "/" + key + "] with Metadata Failed!");
+        }
+        System.out.println("===== Put Object with Metadata End =====");
         System.out.println();
     }
 
@@ -222,6 +264,21 @@ public class LeoFSTest {
             throw new IOException("Content NOT Match!");
         }
         System.out.println("===== Get Object End =====");
+        System.out.println();
+    }
+
+    public static void getObjectWithMetadata(String bucketName, String key, String path, Map<String, String> meta_map) throws IOException {
+        System.out.println("===== Get Object [" + bucketName + "/" + key + "] with Metadata Start =====");
+        Blob object = s3.getBlob(bucketName, key);
+        Map<String, String> meta = object.getMetadata().getUserMetadata();
+        if (!meta.equals(meta_map)) {
+            throw new IOException("Metadata NOT Match!");
+        }
+        InputStream stream = object.getPayload().openStream();
+        if (!IOUtils.contentEquals(stream, new FileInputStream(path))) {
+            throw new IOException("Content NOT Match!");
+        }
+        System.out.println("===== Get Object with Metadata End =====");
         System.out.println();
     }
 

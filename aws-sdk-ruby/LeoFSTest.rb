@@ -16,6 +16,10 @@ SmallTestF  = TempData + "testFile"
 MediumTestF = TempData + "testFile.medium"
 LargeTestF  = TempData + "testFile.large"
 
+MetadataKey = "cmeta_key"
+MetadataVal = "cmeta_val"
+MetadataMap = {MetadataKey => MetadataVal}
+
 def main()
     # `bucket` can be configurable via the command argument
     bucket = "testr"
@@ -39,6 +43,10 @@ def main()
         putObject(bucket, "test.medium",    MediumTestF)
         putObject(bucket, "test.large",     LargeTestF)
 
+        # Put Object with Metadata Test
+        putObjectWithMetadata(bucket, "test.simple.meta", SmallTestF, MetadataMap)
+        putObjectWithMetadata(bucket, "test.large.meta",  LargeTestF, MetadataMap)
+
         # Multipart Upload Object Test
         mpObject(bucket, "test.simple.mp",  SmallTestF)
         mpObject(bucket, "test.large.mp",   LargeTestF)
@@ -60,6 +68,10 @@ def main()
         getObject(bucket, "test.simple.mp", SmallTestF)
         getObject(bucket, "test.medium",    MediumTestF)
         getObject(bucket, "test.large",     LargeTestF)
+
+        # Get Object with Metadata Test
+        getObjectWithMetadata(bucket, "test.simple.meta", SmallTestF, MetadataMap)
+        getObjectWithMetadata(bucket, "test.large.meta",  LargeTestF, MetadataMap)
 
         # Get Not Exist Object Test
         getNotExist(bucket, "test.noexist")
@@ -141,6 +153,22 @@ def putObject(bucketName, key, path)
     printf("\n")
 end
 
+def putObjectWithMetadata(bucketName, key, path, meta_map)
+    printf("===== Put Object [%s/%s] with Metadata Start =====\n", bucketName, key)
+    file = open(path)
+    $s3.put_object(
+        bucket: bucketName,
+        key:    key,
+        body:   file,
+        metadata: meta_map
+    )
+    if !doesFileExist(bucketName, key)
+        raise sprintf("Put Object [%s/%s] with Metadata Failed!\n", bucketName, key)
+    end
+    printf("===== Put Object with Metadata End =====\n")
+    printf("\n")
+end
+
 def mpObject(bucketName, key, path)
     printf("===== Multipart Upload Object [%s/%s] Start =====\n", bucketName, key)
     s3r = Aws::S3::Resource.new(client: $s3)
@@ -183,6 +211,25 @@ def getObject(bucketName, key, path)
     end
 
     printf("===== Get Object End =====\n")
+    printf("\n")
+end
+
+def getObjectWithMetadata(bucketName, key, path, meta_map)
+    printf("===== Get Object [%s/%s] with Metadata Start =====\n", bucketName, key)
+    res = $s3.get_object(
+        bucket: bucketName,
+        key:    key
+    )
+    meta = res.metadata
+    if meta != meta_map
+        raise "Metadata NOT Match!\n";
+    end
+    file = open(path)
+    if !doesFileMatch(file, res.body)
+        raise "Content NOT Match!\n";
+    end
+
+    printf("===== Get Object with Metadata End =====\n")
     printf("\n")
 end
 
