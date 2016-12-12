@@ -157,14 +157,13 @@ public class LeoFSTest {
     public static void init(String SignVer) {
         System.out.println("----- Init Start -----");
         config = new ClientConfiguration();
-        config.setProxyHost(host);
-        config.setProxyPort(port);
         config.withProtocol(Protocol.HTTP);
         if (SignVer.equals("v4")) {
             config.setSignerOverride("AWSS3V4SignerType");
         }
         credentials = new BasicAWSCredentials(accessKeyId, secretAccessKey);
         s3 = new AmazonS3Client(credentials, config);
+        s3.setEndpoint("http://"+host+":"+port);
         S3ClientOptions opts = new S3ClientOptions();
         metadataMap = new HashMap();
         metadataMap.put(metadataKey, metadataVal);
