@@ -104,6 +104,22 @@ or
 $ python LeoFSTest.py v2 localhost 8080 testb
 ```
 
+### Python - boto3
+#### Install the libraries
+
+```bash
+$ sudo pip install boto3
+$ sudo pip install filechunkio
+```
+
+#### Execute the test-case
+
+```bash
+$ python LeoFSTest.py v4 localhost 8080 testb3
+or
+$ python LeoFSTest.py v2 localhost 8080 testb3
+```
+
 ### Erlang - erlcloud
 #### Install the libraries
 ```bash
