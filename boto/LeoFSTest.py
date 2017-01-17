@@ -230,6 +230,8 @@ def getObjectWithMetadata(bucketName, key, path, meta_map):
 def getNotExist(bucketName, key):
     print "===== Get Not Exist Object [%s/%s] Start =====" % (bucketName, key)
     try:
+        bucket = s3.get_bucket(bucketName, validate=False)
+        obj = bucket.get_key(key)
         obj.read(1)
         raise ValueError("Should NOT Exist!")
     except Exception, not_found:
