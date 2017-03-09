@@ -309,10 +309,16 @@ func getObjectWithMetadata(bucketName, key, path string, meta_map map[string]*st
 		log.Fatalln("Content NOT Match!")
 	}
 	log.Printf("Metadata:\n")
+
 	for key, val := range res.Metadata {
 		log.Printf("  %s : %s\n", key, *val)
+		// New SDK Version has problem of converting Headers to Upper Case
+		// Ref: https://github.com/aws/aws-sdk-go/issues/445
 		if val_r, ok := meta_map[key]; !ok || *val != *val_r {
-			log.Fatalln("Metadata NOT Match!")
+			key_lower := string(strings.ToLower(key[:1])) + key[1:]
+			if val_rl, ok := meta_map[key_lower]; !ok || *val != *val_rl {
+				log.Fatalln("Metadata NOT Match!")
+			}
 		}
 	}
 	log.Println("===== Get Object End =====")
