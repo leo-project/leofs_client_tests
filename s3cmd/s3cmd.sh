@@ -2,19 +2,20 @@
 
 function gen_test_sync_dir {
     mkdir -p test_sync
+    dd if=/dev/urandom of=test_sync/testbase bs=4K count=1
     for i in $(seq 1 3)
     do
         mkdir -p test_sync/$i/
         for j in $(seq 1 2)
         do
-            dd if=/dev/urandom of=test_sync/$i/rand_file$j bs=4K count=1
+            cp test_sync/testbase test_sync/$i/rand_file$j
         done
     done
     s3cmd sync test_sync s3://s3cmd-bucket/test_sync/ && \
-        check_count 6 && \
+        check_count 7 && \
         rm -rf test_sync/1 && \
         s3cmd --delete-removed sync test_sync s3://s3cmd-bucket/test_sync/ && \
-        check_count 4
+        check_count 5
 }
 
 function check_count() {
