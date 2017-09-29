@@ -6,6 +6,9 @@ Generate Test Data with
 $ cd temp_data; ./gen.sh
 ```
 
+For some SDKs (e.g. erlcloud, aws-sdk-php), they connect to {BUCKETNAME}.{HOST},
+you have to add corresponding entries to /etc/hosts for name resolving
+
 ### Command Format
 ```bash
 $ tester [SIGNATURE_VERSION] [HOST] [PORT] [BUCKET]
