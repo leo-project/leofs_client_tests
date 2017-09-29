@@ -6,6 +6,9 @@ Generate Test Data with
 $ cd temp_data; ./gen.sh
 ```
 
+**NOTE**:You may need to modify the ```/etc/hosts``` file to add an entry seperated by space to the line starting with 127.0.0.1
+The entry format is of type: <testname>.localhost
+
 ### Command Format
 ```bash
 $ tester [SIGNATURE_VERSION] [HOST] [PORT] [BUCKET]
@@ -63,7 +66,7 @@ $ php LeoFSTest.php v2 localhost 8080 testp
 * content_type depends on libmagic
 
 ```bash
-## CentOS/Fedora/RHEL: 
+## CentOS/Fedora/RHEL:
 $ sudo yum install libmagic-devel
 $ sudo apt-get install ruby-devel
 
@@ -86,7 +89,7 @@ $ cd aws-sdk-ruby
 $ ruby LeoFSTest.rb v4 localhost 8080 testr
 or
 $ ruby LeoFSTest.rb v2 localhost 8080 testr
-``` 
+```
 
 ### Python - boto
 #### Install the libraries
