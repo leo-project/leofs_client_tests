@@ -21,32 +21,35 @@ ENDMACRO()
 
 SET(AWS_PREFIX extern/aws-sdk-cpp)
 SET(AWS_INCLUDE_DIRECTORIES "")
-SET(AWS_LIBRARIES "")
+SET(AWS_LIBRARY_DIRECTORIES "")
 
 SUBDIRLIST(SUBDIRS ${CMAKE_SOURCE_DIR}/${AWS_PREFIX})
 
 FOREACH(subdir ${SUBDIRS})
   SET(AWS_INC_DIR ${CMAKE_SOURCE_DIR}/${AWS_PREFIX}/${subdir}/include)
-  SET(AWS_BIN_DIR ${CMAKE_BINARY_DIR}/${AWS_PREFIX}/${subdir}/include)
+  SET(AWS_BIN_DIR ${CMAKE_BINARY_DIR}/${AWS_PREFIX}/${subdir})
   IF(IS_DIRECTORY ${AWS_INC_DIR})
       LIST(APPEND AWS_INCLUDE_DIRECTORIES ${AWS_INC_DIR})
+      LIST(APPEND AWS_LIBRARY_DIRECTORIES ${AWS_BIN_DIR})
   ENDIF()
 ENDFOREACH()
 # message(STATUS ${AWS_INCLUDE_DIRECTORIES})
 
 # get_property(inc_dir DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
-#set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build/bin)
-
 #set(CMAKE_INSTALL_BINDIR ${CMAKE_SOURCE_DIR}/build/bin)
 #set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_SOURCE_DIR}/build/include)
 #set(CMAKE_INSTALL_LIBDIR ${CMAKE_SOURCE_DIR}/build/lib)
 
-#set(AWS_CPP_SDK_INCLUDE_DIRS /path/to/include/aws)
 #set(AWS_CPP_SDK_CORE_LIB "-l:/path/to/libaws-cpp-sdk-core.so"
 #set(AWS_CPP_SDK_S3_LIB "-l:/path/to/libaws-cpp-sdk-s3.so"
 
+# TODO: compile this before the targets
 add_subdirectory(extern/aws-sdk-cpp)
 
-#add_executable(leofs-client-test-cpp src/main.cpp)
-#target_link_libraries(leofs-client-test-cpp aws)
+include_directories(${AWS_INCLUDE_DIRECTORIES})
+SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${AWS_LIBRARY_DIRECTORIES})
+
+add_executable(leofs-client-test-cpp src/main.cpp)
+add_dependencies(leofs-client-test-cpp aws-sdk-core)
+target_link_libraries(leofs-client-test-cpp aws-sdk-core)
