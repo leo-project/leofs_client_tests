@@ -8,6 +8,9 @@ if(CMAKE_MAJOR_VERSION LESS 3)
     message(WARNING "Building with CMake 3.0 or higher is strongly suggested; current version is ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 endif()
 
+SET(TEST_CXX_FLAGS "-std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TEST_CXX_FLAGS}")
+
 MACRO(SUBDIRLIST result curdir)
   FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
   SET(dirlist "")
@@ -34,22 +37,12 @@ FOREACH(subdir ${SUBDIRS})
   ENDIF()
 ENDFOREACH()
 # message(STATUS ${AWS_INCLUDE_DIRECTORIES})
-
 # get_property(inc_dir DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
-#set(CMAKE_INSTALL_BINDIR ${CMAKE_SOURCE_DIR}/build/bin)
-#set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_SOURCE_DIR}/build/include)
-#set(CMAKE_INSTALL_LIBDIR ${CMAKE_SOURCE_DIR}/build/lib)
-
-#set(AWS_CPP_SDK_CORE_LIB "-l:/path/to/libaws-cpp-sdk-core.so"
-#set(AWS_CPP_SDK_S3_LIB "-l:/path/to/libaws-cpp-sdk-s3.so"
-
-# TODO: compile this before the targets
 add_subdirectory(extern/aws-sdk-cpp)
 
 include_directories(${AWS_INCLUDE_DIRECTORIES})
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${AWS_LIBRARY_DIRECTORIES})
 
 add_executable(leofs-client-test-cpp src/main.cpp)
-add_dependencies(leofs-client-test-cpp aws-sdk-core)
-target_link_libraries(leofs-client-test-cpp aws-sdk-core)
+target_link_libraries(leofs-client-test-cpp aws-cpp-sdk-core)
