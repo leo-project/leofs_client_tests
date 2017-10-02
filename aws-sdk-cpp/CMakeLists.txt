@@ -8,9 +8,6 @@ if(CMAKE_MAJOR_VERSION LESS 3)
     message(WARNING "Building with CMake 3.0 or higher is strongly suggested; current version is ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 endif()
 
-SET(TEST_CXX_FLAGS "-std=c++11")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TEST_CXX_FLAGS}")
-
 MACRO(SUBDIRLIST result curdir)
   FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
   SET(dirlist "")
@@ -41,8 +38,13 @@ ENDFOREACH()
 
 add_subdirectory(extern/aws-sdk-cpp)
 
+SET(TEST_CXX_FLAGS "-std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TEST_CXX_FLAGS}")
+
 include_directories(${AWS_INCLUDE_DIRECTORIES})
+include_directories(include)
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${AWS_LIBRARY_DIRECTORIES})
 
-add_executable(leofs-client-test-cpp src/main.cpp)
-target_link_libraries(leofs-client-test-cpp aws-cpp-sdk-core)
+add_executable(LeoFSTest.cpp src/main.cpp)
+target_link_libraries(LeoFSTest.cpp aws-cpp-sdk-core)
+target_compile_definitions(LeoFSTest.cpp PRIVATE CURRDIR=${CMAKE_BINARY_DIR})
