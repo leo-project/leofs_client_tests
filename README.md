@@ -15,6 +15,24 @@ $ tester [SIGNATURE_VERSION] [HOST] [PORT] [BUCKET]
 ```
 Note that some libraries only support v2/v4 signature
 
+### C++ - aws-sdk-cpp
+#### Get the library
+
+```bash
+$ git submodule init
+```
+
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-cpp
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ LeoFSTest.cpp v4 localhost 8080 testc
+```
+
 ### GO - aws-sdk-go
 #### Install the libraries
 
