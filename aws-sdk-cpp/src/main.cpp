@@ -2,42 +2,98 @@
 #include <string>
 
 #include <aws/core/Aws.h>
+#include <aws/core/auth/AWSCredentialsProvider.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/CreateBucketRequest.h>
+#include <aws/s3/model/DeleteBucketRequest.h>
+#include <aws/s3/model/PutObjectRequest.h>
 
 #include "definitions.h"
 
+using ClientPtrType = std::shared_ptr<Aws::S3::S3Client>;
+using String = Aws::String;
+
+ClientPtrType init(String host, String port)
+{
+    Aws::Client::ClientConfiguration config;
+    config.region = "us-west-2";
+    config.endpointOverride = "http://" + host + ":" + port;
+    config.scheme = Aws::Http::Scheme::HTTP;
+    Aws::Auth::AWSCredentials cred(ACCESS_KEY_ID, SECRET_ACCESS_KEY);
+    return Aws::MakeShared<Aws::S3::S3Client>("S3Client", cred, config);
+}
+
+void createBucket(ClientPtrType client, String bucketName)
+{
+    String base = "=== Create Bucket [" + bucketName;
+    std::cout << base << "]: Start ===\n";
+    auto bucketReq = Aws::S3::Model::CreateBucketRequest();
+    auto bucketRes = client->CreateBucket(bucketReq.WithBucket(bucketName));
+    if (bucketRes.IsSuccess())
+    {
+        std::cout << base << "]: Success ===\n";
+    }
+    std::cout << base << "]: End ===\n";
+}
+
+void deleteBucket(ClientPtrType client, String bucketName)
+{
+    String base = "=== Delete Bucket [" + bucketName;
+    std::cout << base << "]: Start ===\n";
+    auto bucketReq = Aws::S3::Model::DeleteBucketRequest();
+    auto bucketRes = client->DeleteBucket(bucketReq.WithBucket(bucketName));
+    if (bucketRes.IsSuccess())
+    {
+        std::cout << base << "]: Success ===\n";
+    }
+    std::cout << base << "]: End ===\n";
+}
+
+void putObject(ClientPtrType client, String bucketName,
+               String key, String path)
+{
+    String base = "=== Put Object [" + bucketName + "/" + key;
+    std::cout << base << "]: Start ===\n";
+    auto inpData = Aws::MakeShared<Aws::FStream>("PutObjectInputStream",
+            path, std::ios_base::in | std::ios_base::binary);
+    auto objReq = Aws::S3::Model::PutObjectRequest();
+    objReq.WithBucket(bucketName).WithKey(key).SetBody(inpData);
+    auto objRes = client->PutObject(objReq);
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side success ===\n";
+    }
+    std::cout << base << "]: End ===\n";
+}
+
 int main(int argc, char** argv)
 {
+    std::cout << "=== AWS API Init: Start===\n";
     Aws::SDKOptions options;
     // set the options
     options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
     // end of options
-    std::cout << "=== AWS API Init: Start===\n";
     Aws::InitAPI(options);
-    std::cout << "=== AWS API Init: Success ===\n";
     // setup
-    std::string signVer = SIGN_VER, host = HOST, portStr = PORT, bucket = BUCKET;
+    String signVer = SIGN_VER, host = HOST, portStr = PORT,
+                bucketName = BUCKET;
     if (argc)
     {
         signVer = argv[1];
         host = argv[2];
         portStr = argv[3];
-        bucket = argv[4];
+        bucketName = argv[4];
     }
-    int port = std::stoi(portStr);
 
-    Aws::ClientConfiguration config;
-    config.region = "us-west-2";
-    config.endpointOverride = "http://" + host + ":" + port;
-    config.scheme = Aws::Http::Scheme::HTTP;
-    Aws::Auth::AWSCredentials cred(ACCESS_KEY_ID, SECRET_ACCESS_KEY);
-    Aws::S3::S3Client client(cred, config);
+    auto client = init(host, portStr);
+    std::cout << "=== AWS API Init: End ===\n";
     // call tests here
+    createBucket(client, bucketName);
 
-    std::cout << SMALL_TEST_FILE << std::endl;
-
+    deleteBucket(client, bucketName);
     // end of tests
     std::cout << "=== AWS API Shutdown: Start===\n";
     Aws::ShutdownAPI(options);
-    std::cout << "=== AWS API Shutdown: Success ===\n";
+    std::cout << "=== AWS API Shutdown: End ===\n";
     return 0;
 }
