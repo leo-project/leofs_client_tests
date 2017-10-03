@@ -35,6 +35,7 @@ main(Args)->
                          "deps/jsx/ebin",
                          "deps/meck/ebin",
                          "deps/lhttpc/ebin",
+                         "deps/base16/ebin",
                          "deps/leo_commons/ebin/"]),
     [SignVer, Host, Port_S, Bucket] = case length(Args) of
                                           0 ->
@@ -130,7 +131,7 @@ init(_SignVer, Host, Port) ->
              ?SECRET_ACCESS_KEY,
              Host,
              Port),
-    Conf2 = Conf#aws_config{s3_scheme = "http://", http_client = hackney},
+    Conf2 = Conf#aws_config{s3_scheme = "http://"},
     put(s3, Conf2).
 
 createBucket(BucketName) ->
