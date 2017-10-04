@@ -7,6 +7,7 @@
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/CreateBucketRequest.h>
 #include <aws/s3/model/DeleteBucketRequest.h>
+#include <aws/s3/model/HeadBucketRequest.h>
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/s3/model/PutObjectRequest.h>
 
@@ -25,6 +26,17 @@ ClientPtrType init(String host, String port)
     return Aws::MakeShared<Aws::S3::S3Client>("S3Client", cred, config);
 }
 
+bool doesBucketExists(ClientPtrType client, String bucketName)
+{
+    auto objectReq = Aws::S3::Model::HeadBucketRequest();
+    auto objectRes = client->HeadBucket(objectReq.WithBucket(bucketName));
+    if (objectRes.IsSuccess())
+    {
+        return true;
+    }
+    return false;
+}
+
 void createBucket(ClientPtrType client, String bucketName)
 {
     String base = "=== Create Bucket [" + bucketName;
@@ -33,7 +45,16 @@ void createBucket(ClientPtrType client, String bucketName)
     auto bucketRes = client->CreateBucket(bucketReq.WithBucket(bucketName));
     if (bucketRes.IsSuccess())
     {
-        std::cout << base << "]: Success ===\n";
+        std::cout << base << "]: Client Side success ===\n";
+    }
+    else
+    {
+        std::cout << bucketRes.GetError().GetExceptionName() << "\t" <<
+                     bucketRes.GetError().GetMessage() << "\n";
+    }
+    if (!doesBucketExists(client, bucketName))
+    {
+        std::cout << base << "]: Failed ===\n";
     }
     std::cout << base << "]: End ===\n";
 }
@@ -46,7 +67,16 @@ void deleteBucket(ClientPtrType client, String bucketName)
     auto bucketRes = client->DeleteBucket(bucketReq.WithBucket(bucketName));
     if (bucketRes.IsSuccess())
     {
-        std::cout << base << "]: Success ===\n";
+        std::cout << base << "]: Client Side success ===\n";
+    }
+    else
+    {
+        std::cout << bucketRes.GetError().GetExceptionName() << "\t" <<
+                     bucketRes.GetError().GetMessage() << "\n";
+    }
+    if (doesBucketExists(client, bucketName))
+    {
+        std::cout << base << "]: Failed ===\n";
     }
     std::cout << base << "]: End ===\n";
 }
@@ -75,6 +105,8 @@ void putObject(ClientPtrType client, String bucketName, String key, String path)
     if (!objRes.IsSuccess())
     {
         std::cout << base << "]: Client Side success ===\n";
+        std::cout << objRes.GetError().GetExceptionName() << "\t" <<
+                     objRes.GetError().GetMessage() << "\n";
     }
     if (!doesObjectExists(client, bucketName, key))
     {
@@ -94,7 +126,7 @@ int main(int argc, char** argv)
     // setup
     String signVer = SIGN_VER, host = HOST, portStr = PORT,
                 bucketName = BUCKET;
-    if (argc)
+    if (argc == 5)
     {
         signVer = argv[1];
         host = argv[2];
