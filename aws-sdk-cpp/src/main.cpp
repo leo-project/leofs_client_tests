@@ -20,7 +20,7 @@ ClientPtrType init(String host, String port)
 {
     Aws::Client::ClientConfiguration config;
     config.region = "us-west-2";
-    config.endpointOverride = "http://" + host + ":" + port;
+    config.endpointOverride = host + ":" + port;
     config.scheme = Aws::Http::Scheme::HTTP;
     Aws::Auth::AWSCredentials cred(ACCESS_KEY_ID, SECRET_ACCESS_KEY);
     return Aws::MakeShared<Aws::S3::S3Client>("S3Client", cred, config);
