@@ -43,12 +43,9 @@ void createBucket(ClientPtrType client, String bucketName)
     std::cout << base << "]: Start ===\n";
     auto bucketReq = Aws::S3::Model::CreateBucketRequest();
     auto bucketRes = client->CreateBucket(bucketReq.WithBucket(bucketName));
-    if (bucketRes.IsSuccess())
+    if (!bucketRes.IsSuccess())
     {
-        std::cout << base << "]: Client Side success ===\n";
-    }
-    else
-    {
+        std::cout << base << "]: Client Side failure ===\n";
         std::cout << bucketRes.GetError().GetExceptionName() << "\t" <<
                      bucketRes.GetError().GetMessage() << "\n";
     }
@@ -65,12 +62,9 @@ void deleteBucket(ClientPtrType client, String bucketName)
     std::cout << base << "]: Start ===\n";
     auto bucketReq = Aws::S3::Model::DeleteBucketRequest();
     auto bucketRes = client->DeleteBucket(bucketReq.WithBucket(bucketName));
-    if (bucketRes.IsSuccess())
+    if (!bucketRes.IsSuccess())
     {
-        std::cout << base << "]: Client Side success ===\n";
-    }
-    else
-    {
+        std::cout << base << "]: Client Side failure ===\n";
         std::cout << bucketRes.GetError().GetExceptionName() << "\t" <<
                      bucketRes.GetError().GetMessage() << "\n";
     }
@@ -97,6 +91,7 @@ void putObject(ClientPtrType client, String bucketName, String key, String path)
 {
     String base = "=== Put Object [" + bucketName + "/" + key;
     std::cout << base << "]: Start ===\n";
+    std::cout << "Reading from " << path << "\n";
     auto inpData = Aws::MakeShared<Aws::FStream>("PutObjectInputStream",
             path.c_str(), std::ios_base::in | std::ios_base::binary);
     auto objReq = Aws::S3::Model::PutObjectRequest();
@@ -104,7 +99,7 @@ void putObject(ClientPtrType client, String bucketName, String key, String path)
     auto objRes = client->PutObject(objReq);
     if (!objRes.IsSuccess())
     {
-        std::cout << base << "]: Client Side success ===\n";
+        std::cout << base << "]: Client Side failure ===\n";
         std::cout << objRes.GetError().GetExceptionName() << "\t" <<
                      objRes.GetError().GetMessage() << "\n";
     }
@@ -138,6 +133,7 @@ int main(int argc, char** argv)
     std::cout << "=== AWS API Init: End ===\n";
     // call tests here
     createBucket(client, bucketName);
+    std::cout << '\n';
 
     // put object
     putObject(client, bucketName, "test.simple", SMALL_TEST_FILE);

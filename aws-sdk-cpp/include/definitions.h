@@ -10,9 +10,9 @@
 
 #define BUCKET "testc"
 #ifdef CURR_DIR
-#define TEMP_DATA_DIR CURR_DIR "../temp_data/"
+#define TEMP_DATA_DIR CURR_DIR "../../temp_data/"
 #else
-#define TEMP_DATA_DIR "../temp_data/"
+#define TEMP_DATA_DIR "../../temp_data/"
 #endif
 
 #define SMALL_TEST_FILE TEMP_DATA_DIR "testFile"

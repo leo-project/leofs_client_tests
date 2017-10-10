@@ -19,5 +19,5 @@ SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${AWS_LIBRARY_DIRECTORIES})
 
 add_executable(LeoFSTest.cpp src/main.cpp)
 target_link_libraries(LeoFSTest.cpp aws-cpp-sdk-core aws-cpp-sdk-s3)
-target_compile_definitions(LeoFSTest.cpp PRIVATE CURRDIR=${CMAKE_BINARY_DIR})
+target_compile_definitions(LeoFSTest.cpp PRIVATE CURR_DIR="${CMAKE_BINARY_DIR}/")
 set_target_properties(LeoFSTest.cpp PROPERTIES COMPILE_FLAGS ${TEST_CXX_FLAGS})
