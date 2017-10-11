@@ -6,8 +6,9 @@ Generate Test Data with
 $ cd temp_data; ./gen.sh
 ```
 
-For some SDKs (e.g. erlcloud, aws-sdk-php), they connect to {BUCKETNAME}.{HOST},
+For some SDKs (e.g. erlcloud, aws-sdk-php, was-sdk-cpp), they connect to {BUCKETNAME}.{HOST},
 you have to add corresponding entries to /etc/hosts for name resolving
+Reference: http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
 
 ### Command Format
 ```bash
