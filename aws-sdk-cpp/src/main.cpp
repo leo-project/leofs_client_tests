@@ -9,9 +9,11 @@
 #include <aws/s3/model/CreateBucketRequest.h>
 #include <aws/s3/model/CreateMultipartUploadRequest.h>
 #include <aws/s3/model/DeleteBucketRequest.h>
+#include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/HeadBucketRequest.h>
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/s3/model/ListMultipartUploadsRequest.h>
+#include <aws/s3/model/ListPartsRequest.h>
 #include <aws/s3/model/MultipartUpload.h>
 #include <aws/s3/model/PutObjectRequest.h>
 #include <aws/s3/model/UploadPartRequest.h>
@@ -29,10 +31,13 @@ void deleteBucket(ClientPtrType client, String bucketName);
 bool doesObjectExists(ClientPtrType client, String bucketName, String key);
 void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 void putObjectMp(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
+bool doFilesMatch(std::shared_ptr<Aws::FStream> a, std::shared_ptr<Aws::FStream> b);
+void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 
 int main(int argc, char** argv)
 {
-    std::cout << "=== AWS API Init: Start===\n";
+    String base = "=== [AWS API Init";
+    std::cout << base << "]: Start===\n";
     Aws::SDKOptions options;
     // set the options
     options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
@@ -50,7 +55,7 @@ int main(int argc, char** argv)
     }
 
     auto client = init(host, portStr);
-    std::cout << "=== AWS API Init: End ===\n";
+    std::cout << base << "]: End ===\n\n";
     // call tests here
     createBucket(client, bucketName);
     std::cout << '\n';
@@ -68,6 +73,18 @@ int main(int argc, char** argv)
     putObject(client, bucketName, "test.large.meta", LARGE_TEST_FILE, metadata);
 
     // put object in parts
+    putObjectMp(client, bucketName, "test.simple.mp", SMALL_TEST_FILE);
+    putObjectMp(client, bucketName, "test.medium", MED_TEST_FILE);
+    putObjectMp(client, bucketName, "test.large", LARGE_TEST_FILE);
+
+    // put object in parts with metadata
+    putObjectMp(client, bucketName, "test.simple.meta", SMALL_TEST_FILE, metadata);
+    putObjectMp(client, bucketName, "test.medium.meta", MED_TEST_FILE, metadata);
+    putObjectMp(client, bucketName, "test.large.meta", LARGE_TEST_FILE, metadata);
+
+    // head is already tested
+    // get object
+    getObject(client, bucketName, "test.simple", SMALL_TEST_FILE);
 
     deleteBucket(client, bucketName);
     // end of tests
@@ -114,7 +131,7 @@ void createBucket(ClientPtrType client, String bucketName)
     {
         std::cout << base << "]: Failed ===\n";
     }
-    std::cout << base << "]: End ===\n";
+    std::cout << base << "]: End ===\n\n";
 }
 
 void deleteBucket(ClientPtrType client, String bucketName)
@@ -133,7 +150,7 @@ void deleteBucket(ClientPtrType client, String bucketName)
     {
         std::cout << base << "]: Failed ===\n";
     }
-    std::cout << base << "]: End ===\n";
+    std::cout << base << "]: End ===\n\n";
 }
 
 bool doesObjectExists(ClientPtrType client, String bucketName, String key)
@@ -159,7 +176,7 @@ void putObject(ClientPtrType client, String bucketName, String key, String path,
     objReq.WithBucket(bucketName).WithKey(key).SetBody(inpData);;
     if (!metadata.empty())
     {
-        std::cout << "Key\t:\t\tValue\n";
+        std::cout << "Map Key\t:\t\tValue\n";
         for(auto& it: metadata)
         {
             auto key = it.first;
@@ -179,7 +196,7 @@ void putObject(ClientPtrType client, String bucketName, String key, String path,
     {
         std::cout << base << "]: Failed ===\n";
     }
-    std::cout << base << "]: End ===\n";
+    std::cout << base << "]: End ===\n\n";
 }
 
 void putObjectMp(ClientPtrType client, String bucketName, String key, String path, Map metadata)
@@ -187,6 +204,7 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
     String base = "=== Put Object MultiPart [" + bucketName + "/" + key;
     std::cout << base << "]: Start ===\n";
     std::cout << "Reading from " << path << "\n";
+
     auto inpData = Aws::MakeShared<Aws::FStream>("PutObjectMpInputStream",
             path.c_str(), std::ios_base::in | std::ios_base::binary);
     auto objReq = Aws::S3::Model::CreateMultipartUploadRequest();
@@ -209,8 +227,9 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
         std::cout << "Couldn't create multi-part upload\n";
         std::cout << objRes.GetError().GetExceptionName() << "\t" <<
                      objRes.GetError().GetMessage() << "\n";
-        goto ReturnPt;
+        goto PutReturnPt;
     }
+    /** LeoFS Doesn't support ListMultipartUploadsRequest
     {
     // check if multipart upload exists
     auto listReq = Aws::S3::Model::ListMultipartUploadsRequest();
@@ -223,7 +242,7 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
         std::cout << listRes.GetError().GetExceptionName() << "\t" <<
                      listRes.GetError().GetMessage() << "\n";
         // abort upload?
-        goto ReturnPt;
+        goto PutReturnPt;
     }
     auto id = objRes.GetResult().GetUploadId();
     auto uploads = listRes.GetResult().GetUploads();
@@ -231,18 +250,22 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
     {
         std::cout << base << "]: Upload check failure ===\n";
         std::cout << "Couldn't find in multi-part upload list\n";
-        std::cout << listRes.GetError().GetExceptionName() << "\t" <<
-                     listRes.GetError().GetMessage() << "\n";
+        std::cout << "Found " << uploads.size() << " parts\n" <<
+                     "Id was: " << uploads[0].GetUploadId() << "\n";
         // abort upload?
-        goto ReturnPt;
+        goto PutReturnPt;
     }
     }
+    **/
     // upload part
+    /** LeoFS doesn't recognise the key provided earlier
+    int Number = 1;
+    String partETag;
     {
     auto id = objRes.GetResult().GetUploadId();
     auto uploadReq = Aws::S3::Model::UploadPartRequest();
     uploadReq.WithBucket(bucketName).WithKey(key).WithUploadId(id);;
-    uploadReq.WithPartNumber(1).SetBody(inpData);
+    uploadReq.WithPartNumber(Number).SetBody(inpData);
     auto uploadRes = client->UploadPart(uploadReq);
     if (!uploadRes.IsSuccess())
     {
@@ -251,15 +274,44 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
         std::cout << uploadRes.GetError().GetExceptionName() << "\t" <<
                      uploadRes.GetError().GetMessage() << "\n";
         // abort upload?
-        goto ReturnPt;
+        goto PutReturnPt;
     }
+    partETag = uploadRes.GetResult().GetETag();
     }
     // check if multipart exists
+    {
+    auto id = objRes.GetResult().GetUploadId();
+    auto partReq = Aws::S3::Model::ListPartsRequest();
+    partReq.WithBucket(bucketName).WithKey(key).WithUploadId(id);;
+    auto partRes = client->ListParts(partReq);
+    if (!partRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+        std::cout << "Couldn't list multi-part upload\n";
+        std::cout << partRes.GetError().GetExceptionName() << "\t" <<
+                     partRes.GetError().GetMessage() << "\n";
+        // abort upload?
+        goto PutReturnPt;
+    }
+    auto uploads = partRes.GetResult().GetParts();
+    if (uploads.size() != 1 || uploads[0].GetPartNumber() != Number ||
+        uploads[0].GetETag() != partETag)
+    {
+        std::cout << base << "]: Upload check failure ===\n";
+        std::cout << "Couldn't find part in uploaded list\n";
+        // abort upload?
+        goto PutReturnPt;
+    }
+    }
     // finish upload
     {
     auto id = objRes.GetResult().GetUploadId();
+    auto part = Aws::S3::Model::CompletedPart();
+    auto parts = Aws::S3::Model::CompletedMultipartUpload();
+    parts.AddParts(part.WithETag(partETag).WithPartNumber(Number));
     auto compReq = Aws::S3::Model::CompleteMultipartUploadRequest();
     compReq.WithBucket(bucketName).WithKey(key).WithUploadId(id);
+    compReq.SetMultipartUpload(parts);
     auto compRes = client->CompleteMultipartUpload(compReq);
     if (!compRes.IsSuccess())
     {
@@ -267,13 +319,76 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
         std::cout << "Couldn't complete multi-part upload\n";
         std::cout << compRes.GetError().GetExceptionName() << "\t" <<
                      compRes.GetError().GetMessage() << "\n";
-        goto ReturnPt;
+        goto PutReturnPt;
     }
     }
-ReturnPt:
+    **/
+PutReturnPt:
     if (!doesObjectExists(client, bucketName, key))
     {
         std::cout << base << "]: Failed ===\n";
     }
-    std::cout << base << "]: End ===\n";
+    std::cout << base << "]: End ===\n\n";
+}
+
+bool doFilesMatch(std::shared_ptr<Aws::FStream> a, std::shared_ptr<Aws::FStream> b)
+{
+    std::ifstream::pos_type size1, size2;
+    size1 = a->seekg(0, std::ifstream::end).tellg();
+    a->seekg(0, std::ifstream::beg);
+    size2 = b->seekg(0, std::ifstream::end).tellg();
+    b->seekg(0, std::ifstream::beg);
+    if (size1 != size2)
+    {
+        return false;
+    }
+    const size_t BLOCKSIZE = 4096;
+    size_t remaining = size1;
+    while (remaining)
+    {
+        char buffer1[BLOCKSIZE], buffer2[BLOCKSIZE];
+        size_t size = std::min(BLOCKSIZE, remaining);
+
+        a->read(buffer1, size);
+        b->read(buffer2, size);
+
+        if (!memcmp(buffer1, buffer2, size))
+        {
+            return false;
+        }
+        remaining -= size;
+    }
+    return true;
+}
+
+void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata)
+{
+    String base = "=== Get Object [" + bucketName + "/" + key;
+    std::cout << base << "]: Start ===\n";
+    std::cout << "Writing to " << path << "\n";
+    auto inpData = Aws::MakeShared<Aws::FStream>("GetObjectInputStream",
+            path.c_str(), std::ios_base::in | std::ios_base::binary);
+    auto objReq = Aws::S3::Model::GetObjectRequest();
+    objReq.WithBucket(bucketName).WithKey(key);
+    auto objRes = client->GetObject(objReq);
+//    auto res = objRes.GetResult();
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+        std::cout << objRes.GetError().GetExceptionName() << "\t" <<
+                     objRes.GetError().GetMessage() << "\n";
+        goto GetReturnPt;
+    }
+    if (!metadata.empty())
+    {
+        ;
+    }
+GetReturnPt:
+    auto& file = objRes.GetResult().GetBody();
+    if (!doFilesMatch(inpData, Aws::MakeShared<Aws::FStream>(
+                    "GetObjectWebStream", file)))
+    {
+        std::cout << base << "]: Failed ===\n";
+    }
+    std::cout << base << "]: End ===\n\n";
 }
