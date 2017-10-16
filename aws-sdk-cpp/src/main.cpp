@@ -31,8 +31,9 @@ void deleteBucket(ClientPtrType client, String bucketName);
 std::tuple<bool, Map> doesObjectExists(ClientPtrType client, String bucketName, String key);
 void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 void putObjectMp(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
-bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b);
+bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min = 0, size_t max = 0);
 void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
+void getFakeObject(ClientPtrType client, String bucketName, String key);
 
 int main(int argc, char** argv)
 {
@@ -101,6 +102,7 @@ int main(int argc, char** argv)
     getFakeObject(client, bucketName, "test.noexist");
 
     // range get object
+
     // copy object
     // list object
     // delete all objects
@@ -355,13 +357,24 @@ PutReturnPt:
     std::cout << base << "]: End ===\n\n";
 }
 
-bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b)
+bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min, size_t max)
 {
     std::ifstream::pos_type size1, size2;
-    size1 = a->seekg(0, std::ifstream::end).tellg();
-    a->seekg(0, std::ifstream::beg);
-    size2 = b.seekg(0, std::ifstream::end).tellg();
-    b.seekg(0, std::ifstream::beg);
+    if (min == max)
+    {
+        size1 = a->seekg(0, std::ifstream::end).tellg();
+        a->seekg(0, std::ifstream::beg);
+        size2 = b.seekg(0, std::ifstream::end).tellg();
+        b.seekg(0, std::ifstream::beg);
+    }
+    else
+    {
+        // ensures that the file size is taken care of
+        size1 = a->seekg(max).tellg() - a->seekg(min).tellg();
+        a->seekg(min);
+        size2 = b.seekg(max).tellg() - b.seekg(min).tellg();
+        b.seekg(min);
+    }
     if (size1 != size2)
     {
         std::cout << "Buffer size is different\n";
@@ -438,9 +451,9 @@ void getFakeObject(ClientPtrType client, String bucketName, String key)
 {
     String base = "=== Get Fake Object [" + bucketName + "/" + key;
     std::cout << base << "]: Start ===\n";
-    std::cout << "Reading from " << path << "\n";
+    std::cout << "Reading from " << key << "\n";
     auto inpData = Aws::MakeShared<Aws::FStream>("GetObjectInputStream",
-            path.c_str(), std::ios_base::in | std::ios_base::binary);
+            key.c_str(), std::ios_base::in | std::ios_base::binary);
     auto objReq = Aws::S3::Model::GetObjectRequest();
     objReq.WithBucket(bucketName).WithKey(key);
     auto objRes = client->GetObject(objReq);
@@ -449,3 +462,33 @@ void getFakeObject(ClientPtrType client, String bucketName, String key)
         std::cout << base << "]: Failed ===\n";
     }
     std::cout << base << "]: End ===\n\n";
+}
+
+void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max)
+{
+    String base = "=== Get Object [" + bucketName + "/" + key;
+    std::cout << base << "]: Start ===\n";
+    std::cout << "Reading from " << path << "\n";
+    String range(("byte=" + std::to_string(min) + "-" + std::to_string(max)).c_str());
+    auto inpData = Aws::MakeShared<Aws::FStream>("GetObjectInputStream",
+            path.c_str(), std::ios_base::in | std::ios_base::binary);
+    auto objReq = Aws::S3::Model::GetObjectRequest();
+    objReq.WithBucket(bucketName).WithKey(key).WithRange(range);
+    auto objRes = client->GetObject(objReq);
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+        std::cout << objRes.GetError().GetExceptionName() << "\t" <<
+                     objRes.GetError().GetMessage() << "\n";
+        std::cout << base << "]: Failed ===\n";
+    }
+    else
+    {
+        Aws::IOStream& file = objRes.GetResult().GetBody();
+        if (!doFilesMatch(inpData.get(), file, min, max))
+        {
+            std::cout << base << "]: Content not equal ===\n";
+        }
+    }
+    std::cout << base << "]: End ===\n\n";
+}
