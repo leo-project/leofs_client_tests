@@ -28,10 +28,10 @@ ClientPtrType init(String host, String port);
 bool doesBucketExists(ClientPtrType client, String bucketName);
 void createBucket(ClientPtrType client, String bucketName);
 void deleteBucket(ClientPtrType client, String bucketName);
-bool doesObjectExists(ClientPtrType client, String bucketName, String key);
+std::tuple<bool, Map> doesObjectExists(ClientPtrType client, String bucketName, String key);
 void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 void putObjectMp(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
-bool doFilesMatch(std::shared_ptr<Aws::FStream> a, std::shared_ptr<Aws::FStream> b);
+bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b);
 void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 
 int main(int argc, char** argv)
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     // put object with metadata
     Map metadata;
     metadata[METADATA_KEY] = METADATA_VAL;
-    putObject(client, bucketName, "test.simple.meta", SMALL_TEST_FILE, metadata);
+    putObject(client, bucketName, "test.simple", SMALL_TEST_FILE, metadata);
     putObject(client, bucketName, "test.medium.meta", MED_TEST_FILE, metadata);
     putObject(client, bucketName, "test.large.meta", LARGE_TEST_FILE, metadata);
 
@@ -78,14 +78,38 @@ int main(int argc, char** argv)
     putObjectMp(client, bucketName, "test.large", LARGE_TEST_FILE);
 
     // put object in parts with metadata
-    putObjectMp(client, bucketName, "test.simple.meta", SMALL_TEST_FILE, metadata);
-    putObjectMp(client, bucketName, "test.medium.meta", MED_TEST_FILE, metadata);
-    putObjectMp(client, bucketName, "test.large.meta", LARGE_TEST_FILE, metadata);
+    putObjectMp(client, bucketName, "test.simple.meta.mp", SMALL_TEST_FILE, metadata);
+    putObjectMp(client, bucketName, "test.medium.meta.mp", MED_TEST_FILE, metadata);
+    putObjectMp(client, bucketName, "test.large.meta.mp", LARGE_TEST_FILE, metadata);
 
     // head is already tested
     // get object
     getObject(client, bucketName, "test.simple", SMALL_TEST_FILE);
+    getObject(client, bucketName, "test.medium", MED_TEST_FILE);
+    getObject(client, bucketName, "test.large", LARGE_TEST_FILE);
+    getObject(client, bucketName, "test.simple.mp", SMALL_TEST_FILE);
+    getObject(client, bucketName, "test.medium.mp", MED_TEST_FILE);
+    getObject(client, bucketName, "test.large.mp", LARGE_TEST_FILE);
+    getObject(client, bucketName, "test.simple.meta", SMALL_TEST_FILE, metadata);
+    getObject(client, bucketName, "test.medium.meta", MED_TEST_FILE, metadata);
+    getObject(client, bucketName, "test.large.meta", LARGE_TEST_FILE, metadata);
+    getObject(client, bucketName, "test.simple.meta.mp", SMALL_TEST_FILE, metadata);
+    getObject(client, bucketName, "test.medium.meta.mp", MED_TEST_FILE, metadata);
+    getObject(client, bucketName, "test.large.meta.mp", LARGE_TEST_FILE, metadata);
 
+    // get fake object
+    getFakeObject(client, bucketName, "test.noexist");
+
+    // range get object
+    // copy object
+    // list object
+    // delete all objects
+    // put dummy objects
+    // multi-page list obj
+    // multi-delete
+    // get-put acl
+
+    // delete bucket
     deleteBucket(client, bucketName);
     // end of tests
     std::cout << "=== AWS API Shutdown: Start===\n";
@@ -153,16 +177,16 @@ void deleteBucket(ClientPtrType client, String bucketName)
     std::cout << base << "]: End ===\n\n";
 }
 
-bool doesObjectExists(ClientPtrType client, String bucketName, String key)
+std::tuple<bool, Map> doesObjectExists(ClientPtrType client, String bucketName, String key)
 {
     auto objectReq = Aws::S3::Model::HeadObjectRequest();
     objectReq.WithBucket(bucketName).WithKey(key);
     auto objectRes = client->HeadObject(objectReq);
     if (objectRes.IsSuccess())
     {
-        return true;
+        return std::make_tuple(true, objectRes.GetResult().GetMetadata());
     }
-    return false;
+    return std::make_tuple(false, Map());
 }
 
 void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata)
@@ -192,7 +216,7 @@ void putObject(ClientPtrType client, String bucketName, String key, String path,
         std::cout << objRes.GetError().GetExceptionName() << "\t" <<
                      objRes.GetError().GetMessage() << "\n";
     }
-    if (!doesObjectExists(client, bucketName, key))
+    if (!std::get<0>(doesObjectExists(client, bucketName, key)))
     {
         std::cout << base << "]: Failed ===\n";
     }
@@ -324,22 +348,23 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
     }
     **/
 PutReturnPt:
-    if (!doesObjectExists(client, bucketName, key))
+    if (!std::get<0>(doesObjectExists(client, bucketName, key)))
     {
         std::cout << base << "]: Failed ===\n";
     }
     std::cout << base << "]: End ===\n\n";
 }
 
-bool doFilesMatch(std::shared_ptr<Aws::FStream> a, std::shared_ptr<Aws::FStream> b)
+bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b)
 {
     std::ifstream::pos_type size1, size2;
     size1 = a->seekg(0, std::ifstream::end).tellg();
     a->seekg(0, std::ifstream::beg);
-    size2 = b->seekg(0, std::ifstream::end).tellg();
-    b->seekg(0, std::ifstream::beg);
+    size2 = b.seekg(0, std::ifstream::end).tellg();
+    b.seekg(0, std::ifstream::beg);
     if (size1 != size2)
     {
+        std::cout << "Buffer size is different\n";
         return false;
     }
     const size_t BLOCKSIZE = 4096;
@@ -350,10 +375,11 @@ bool doFilesMatch(std::shared_ptr<Aws::FStream> a, std::shared_ptr<Aws::FStream>
         size_t size = std::min(BLOCKSIZE, remaining);
 
         a->read(buffer1, size);
-        b->read(buffer2, size);
+        b.read(buffer2, size);
 
-        if (!memcmp(buffer1, buffer2, size))
+        if (memcmp(buffer1, buffer2, size))
         {
+            std::cout << "Buffer content is different\n";
             return false;
         }
         remaining -= size;
@@ -361,34 +387,65 @@ bool doFilesMatch(std::shared_ptr<Aws::FStream> a, std::shared_ptr<Aws::FStream>
     return true;
 }
 
+void print(Map map)
+{
+    std::cout << "MAP\n";
+    for (auto it: map)
+    {
+        std::cout << it.first << '\t' << it.second << '\n';
+    }
+}
+
 void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata)
 {
     String base = "=== Get Object [" + bucketName + "/" + key;
     std::cout << base << "]: Start ===\n";
-    std::cout << "Writing to " << path << "\n";
+    std::cout << "Reading from " << path << "\n";
     auto inpData = Aws::MakeShared<Aws::FStream>("GetObjectInputStream",
             path.c_str(), std::ios_base::in | std::ios_base::binary);
     auto objReq = Aws::S3::Model::GetObjectRequest();
     objReq.WithBucket(bucketName).WithKey(key);
     auto objRes = client->GetObject(objReq);
-//    auto res = objRes.GetResult();
     if (!objRes.IsSuccess())
     {
         std::cout << base << "]: Client Side failure ===\n";
         std::cout << objRes.GetError().GetExceptionName() << "\t" <<
                      objRes.GetError().GetMessage() << "\n";
-        goto GetReturnPt;
+        std::cout << base << "]: Failed ===\n";
     }
-    if (!metadata.empty())
+    else
     {
-        ;
+        if (!metadata.empty())
+        {
+            if (metadata != objRes.GetResult().GetMetadata())
+            {
+                std::cout << objRes.GetResult().GetMissingMeta() << "\n";
+                print(metadata);
+                print(objRes.GetResult().GetMetadata());
+                std::cout << base << "]: Metadata not equal ===\n";
+            }
+        }
+        Aws::IOStream& file = objRes.GetResult().GetBody();
+        if (!doFilesMatch(inpData.get(), file))
+        {
+            std::cout << base << "]: Content not equal ===\n";
+        }
     }
-GetReturnPt:
-    auto& file = objRes.GetResult().GetBody();
-    if (!doFilesMatch(inpData, Aws::MakeShared<Aws::FStream>(
-                    "GetObjectWebStream", file)))
+    std::cout << base << "]: End ===\n\n";
+}
+
+void getFakeObject(ClientPtrType client, String bucketName, String key)
+{
+    String base = "=== Get Fake Object [" + bucketName + "/" + key;
+    std::cout << base << "]: Start ===\n";
+    std::cout << "Reading from " << path << "\n";
+    auto inpData = Aws::MakeShared<Aws::FStream>("GetObjectInputStream",
+            path.c_str(), std::ios_base::in | std::ios_base::binary);
+    auto objReq = Aws::S3::Model::GetObjectRequest();
+    objReq.WithBucket(bucketName).WithKey(key);
+    auto objRes = client->GetObject(objReq);
+    if (objRes.IsSuccess())
     {
         std::cout << base << "]: Failed ===\n";
     }
     std::cout << base << "]: End ===\n\n";
-}
