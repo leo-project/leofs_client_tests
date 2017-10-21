@@ -10,6 +10,8 @@
 #include <aws/s3/model/CreateBucketRequest.h>
 #include <aws/s3/model/CreateMultipartUploadRequest.h>
 #include <aws/s3/model/DeleteBucketRequest.h>
+#include <aws/s3/model/DeleteObjectRequest.h>
+#include <aws/s3/model/DeleteObjectsRequest.h>
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/HeadBucketRequest.h>
 #include <aws/s3/model/HeadObjectRequest.h>
@@ -25,6 +27,7 @@
 using ClientPtrType = std::shared_ptr<Aws::S3::S3Client>;
 using String = Aws::String;
 using Map = Aws::Map<String, String>;
+using Object = Aws::S3::Model::Object;
 
 ClientPtrType init(String host, String port);
 bool doesBucketExists(ClientPtrType client, String bucketName);
@@ -38,7 +41,8 @@ void getObject(ClientPtrType client, String bucketName, String key, String path,
 void getFakeObject(ClientPtrType client, String bucketName, String key);
 void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max);
 void copyObject(ClientPtrType client, String bucketName, String src, String dst);
-void listObject(ClientPtrType client, String bucketName, String prefix, size_t expected);
+Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, bool pass = false);
+void deleteAllObjects(ClientPtrType client, String bucketName);
 
 int main(int argc, char** argv)
 {
@@ -117,8 +121,12 @@ int main(int argc, char** argv)
     getObject(client, bucketName, "test.simple.copy", SMALL_TEST_FILE);
 
     // list object
-    listObject(client, bucketName, "", -1);
+    listObjects(client, bucketName, "", -1);
+
     // delete all objects
+    deleteAllObjects(client, bucketName);
+    listObjects(client, bucketName, "", 0);
+
     // put dummy objects
     // multi-page list obj
     // multi-delete
@@ -531,7 +539,7 @@ void copyObject(ClientPtrType client, String bucketName, String src, String dst)
     std::cout << base << "]: End ===\n\n";
 }
 
-void listObject(ClientPtrType client, String bucketName, String prefix, size_t expected)
+Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, bool pass)
 {
     String base = "=== List Object [" + bucketName + "/" + prefix;
     std::cout << base << "]: Start ===\n";
@@ -542,19 +550,46 @@ void listObject(ClientPtrType client, String bucketName, String prefix, size_t e
     {
         std::cout << base << "]: Client Side failure ===\n";
     }
-    for (Aws::S3::Model::Object it: objRes.GetResult().GetContents())
+    if (!pass)
     {
-        std::cout << "Name: " << it.GetKey() <<
-                     "\tSize: " << it.GetSize() << "\n";
-    }
-    if (expected != size_t(-1))
-    {
-        size_t count = objRes.GetResult().GetContents().size();
-        if (expected != count)
+        for (Object it: objRes.GetResult().GetContents())
         {
-            std::cout << base << "]: Failed ===\n";
-            std::cout << "Expected " << expected << " objects, got " <<
-                         count << "\n";
+            std::cout << "Name: " << it.GetKey() <<
+                        "\tSize: " << it.GetSize() << "\n";
+        }
+        if (expected != size_t(-1))
+        {
+            size_t count = objRes.GetResult().GetContents().size();
+            if (expected != count)
+            {
+                std::cout << base << "]: Failed ===\n";
+                std::cout << "Expected " << expected << " objects, got " <<
+                            count << "\n";
+            }
+        }
+    }
+    std::cout << base << "]: End ===\n\n";
+    return objRes.GetResult().GetContents();
+}
+
+void deleteAllObjects(ClientPtrType client, String bucketName)
+{
+    String base = "=== Delete All Objects [" + bucketName;
+    std::cout << base << "]: Start ===\n";
+    auto objects = listObjects(client, bucketName, "", -1, true);
+    auto objReq = Aws::S3::Model::DeleteObjectRequest();
+    objReq.WithBucket(bucketName);
+    for (auto obj: objects)
+    {
+        auto key = obj.GetKey();
+        auto objRes = client->DeleteObject(objReq.WithKey(key));
+        if (!objRes.IsSuccess())
+        {
+            std::cout << base << "]: Client Side failure ===\n";
+        }
+        if (std::get<0>(doesObjectExists(client, bucketName, key)))
+        {
+            std::cout << base << "]: Deletion of " << key << " Failed ===\n";
         }
     }
     std::cout << base << "]: End ===\n\n";
