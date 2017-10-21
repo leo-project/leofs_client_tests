@@ -1,6 +1,8 @@
+#include <chrono>
+#include <fstream>
 #include <iostream>
 #include <string>
-#include <fstream>
+#include <thread>
 
 #include <aws/core/Aws.h>
 #include <aws/core/auth/AWSCredentialsProvider.h>
@@ -34,7 +36,7 @@ bool doesBucketExists(ClientPtrType client, String bucketName);
 void createBucket(ClientPtrType client, String bucketName);
 void deleteBucket(ClientPtrType client, String bucketName);
 std::tuple<bool, Map> doesObjectExists(ClientPtrType client, String bucketName, String key);
-void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
+void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map(), size_t loop = 0);
 void putObjectMp(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min = 0, size_t max = 0);
 void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
@@ -42,6 +44,7 @@ void getFakeObject(ClientPtrType client, String bucketName, String key);
 void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max);
 void copyObject(ClientPtrType client, String bucketName, String src, String dst);
 Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, bool pass = false);
+void deleteObject(ClientPtrType client, String bucketName, String key);
 void deleteAllObjects(ClientPtrType client, String bucketName);
 
 int main(int argc, char** argv)
@@ -128,6 +131,9 @@ int main(int argc, char** argv)
     listObjects(client, bucketName, "", 0);
 
     // put dummy objects
+    putObject(client, bucketName, "test.small.", SMALL_TEST_FILE, Map(), 35);
+    listObjects(client, bucketName, "", -1);
+
     // multi-page list obj
     // multi-delete
     // get-put acl
@@ -212,7 +218,7 @@ std::tuple<bool, Map> doesObjectExists(ClientPtrType client, String bucketName, 
     return std::make_tuple(false, Map());
 }
 
-void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata)
+void putObject(ClientPtrType client, String bucketName, String key, String path, Map metadata, size_t loop)
 {
     String base = "=== Put Object [" + bucketName + "/" + key;
     std::cout << base << "]: Start ===\n";
@@ -220,7 +226,7 @@ void putObject(ClientPtrType client, String bucketName, String key, String path,
     auto inpData = Aws::MakeShared<Aws::FStream>("PutObjectInputStream",
             path.c_str(), std::ios_base::in | std::ios_base::binary);
     auto objReq = Aws::S3::Model::PutObjectRequest();
-    objReq.WithBucket(bucketName).WithKey(key).SetBody(inpData);;
+    objReq.WithBucket(bucketName).SetBody(inpData);;
     if (!metadata.empty())
     {
         std::cout << "Map Key\t:\t\tValue\n";
@@ -232,16 +238,34 @@ void putObject(ClientPtrType client, String bucketName, String key, String path,
         }
         objReq.SetMetadata(metadata);
     }
-    auto objRes = client->PutObject(objReq);
-    if (!objRes.IsSuccess())
+    if (loop == 0)
     {
-        std::cout << base << "]: Client Side failure ===\n";
-        std::cout << objRes.GetError().GetExceptionName() << "\t" <<
-                     objRes.GetError().GetMessage() << "\n";
+        auto objRes = client->PutObject(objReq.WithKey(key));
+        if (!objRes.IsSuccess())
+        {
+            std::cout << base << "]: Client Side failure ===\n";
+            std::cout << objRes.GetError().GetExceptionName() << "\t" <<
+                        objRes.GetError().GetMessage() << "\n";
+        }
+        if (!std::get<0>(doesObjectExists(client, bucketName, key)))
+        {
+            std::cout << base << "]: Failed ===\n";
+        }
     }
-    if (!std::get<0>(doesObjectExists(client, bucketName, key)))
+    for (size_t i = 0; i < loop; ++i)
     {
-        std::cout << base << "]: Failed ===\n";
+        String key_suffix = std::to_string(i).c_str();
+        auto objRes = client->PutObject(objReq.WithKey(key + key_suffix));
+        if (!objRes.IsSuccess())
+        {
+            std::cout << base << key_suffix << "]: Client Side failure ===\n";
+            std::cout << objRes.GetError().GetExceptionName() << "\t" <<
+                        objRes.GetError().GetMessage() << "\n";
+        }
+        if (!std::get<0>(doesObjectExists(client, bucketName, key + key_suffix)))
+        {
+            std::cout << base << key_suffix << "]: Failed ===\n";
+        }
     }
     std::cout << base << "]: End ===\n\n";
 }
@@ -572,25 +596,32 @@ Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String 
     return objRes.GetResult().GetContents();
 }
 
+void deleteObject(ClientPtrType client, String bucketName, String key)
+{
+    String base = "=== Delete Object [" + bucketName + "/" + key;
+    std::cout << base << "]: Start ===\n";
+    auto objReq = Aws::S3::Model::DeleteObjectRequest();
+    objReq.WithBucket(bucketName);
+    auto objRes = client->DeleteObject(objReq.WithKey(key));
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+    }
+    if (std::get<0>(doesObjectExists(client, bucketName, key)))
+    {
+        std::cout << base << "]: Deletion of " << key << " Failed ===\n";
+    }
+    std::cout << base << "]: End ===\n\n";
+}
+
 void deleteAllObjects(ClientPtrType client, String bucketName)
 {
     String base = "=== Delete All Objects [" + bucketName;
     std::cout << base << "]: Start ===\n";
     auto objects = listObjects(client, bucketName, "", -1, true);
-    auto objReq = Aws::S3::Model::DeleteObjectRequest();
-    objReq.WithBucket(bucketName);
     for (auto obj: objects)
     {
-        auto key = obj.GetKey();
-        auto objRes = client->DeleteObject(objReq.WithKey(key));
-        if (!objRes.IsSuccess())
-        {
-            std::cout << base << "]: Client Side failure ===\n";
-        }
-        if (std::get<0>(doesObjectExists(client, bucketName, key)))
-        {
-            std::cout << base << "]: Deletion of " << key << " Failed ===\n";
-        }
+        deleteObject(client, bucketName, obj.GetKey());
     }
     std::cout << base << "]: End ===\n\n";
 }
