@@ -34,6 +34,7 @@ void putObjectMp(ClientPtrType client, String bucketName, String key, String pat
 bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min = 0, size_t max = 0);
 void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 void getFakeObject(ClientPtrType client, String bucketName, String key);
+void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max);
 
 int main(int argc, char** argv)
 {
@@ -102,6 +103,10 @@ int main(int argc, char** argv)
     getFakeObject(client, bucketName, "test.noexist");
 
     // range get object
+    rangeObject(client, bucketName, "test.simple", SMALL_TEST_FILE, 1, 4);
+    // rangeObject(client, bucketName, "test.simple.mp", SMALL_TEST_FILE, 1, 4);
+    rangeObject(client, bucketName, "test.large", LARGE_TEST_FILE, 1048576, 40485760);
+    // rangeObject(client, bucketName, "test.large.mp", LARGE_TEST_FILE, 1048576, 10485760);
 
     // copy object
     // list object
@@ -369,15 +374,18 @@ bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min, size_t max)
     }
     else
     {
+        std::cout << "Modification\n";
         // ensures that the file size is taken care of
-        size1 = a->seekg(max).tellg() - a->seekg(min).tellg();
+        // off by 1 added coz aws starts counting from 1
+        size1 = a->seekg(max + 1).tellg() - a->seekg(min).tellg();
         a->seekg(min);
-        size2 = b.seekg(max).tellg() - b.seekg(min).tellg();
-        b.seekg(min);
+        size2 = b.seekg(0, std::ifstream::end).tellg();
+        b.seekg(0, std::ifstream::beg);
     }
     if (size1 != size2)
     {
-        std::cout << "Buffer size is different\n";
+        std::cout << "Buffer size is different (" << size1 << " vs " <<
+                     size2 << ")\n";
         return false;
     }
     const size_t BLOCKSIZE = 4096;
@@ -392,6 +400,11 @@ bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min, size_t max)
 
         if (memcmp(buffer1, buffer2, size))
         {
+            for (size_t i = 0; i < size; ++i)
+            {
+                std::cout << uint16_t(buffer1[i]) << ":" <<
+                             uint16_t(buffer2[i]) << "\t";
+            }
             std::cout << "Buffer content is different\n";
             return false;
         }
@@ -466,7 +479,7 @@ void getFakeObject(ClientPtrType client, String bucketName, String key)
 
 void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max)
 {
-    String base = "=== Get Object [" + bucketName + "/" + key;
+    String base = "=== Range Object [" + bucketName + "/" + key;
     std::cout << base << "]: Start ===\n";
     std::cout << "Reading from " << path << "\n";
     String range(("byte=" + std::to_string(min) + "-" + std::to_string(max)).c_str());
