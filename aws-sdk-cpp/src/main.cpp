@@ -6,6 +6,7 @@
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/CompleteMultipartUploadRequest.h>
+#include <aws/s3/model/CopyObjectRequest.h>
 #include <aws/s3/model/CreateBucketRequest.h>
 #include <aws/s3/model/CreateMultipartUploadRequest.h>
 #include <aws/s3/model/DeleteBucketRequest.h>
@@ -13,6 +14,7 @@
 #include <aws/s3/model/HeadBucketRequest.h>
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/s3/model/ListMultipartUploadsRequest.h>
+#include <aws/s3/model/ListObjectsRequest.h>
 #include <aws/s3/model/ListPartsRequest.h>
 #include <aws/s3/model/MultipartUpload.h>
 #include <aws/s3/model/PutObjectRequest.h>
@@ -35,6 +37,8 @@ bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min = 0, size_t max 
 void getObject(ClientPtrType client, String bucketName, String key, String path, Map metadata = Map());
 void getFakeObject(ClientPtrType client, String bucketName, String key);
 void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max);
+void copyObject(ClientPtrType client, String bucketName, String src, String dst);
+void listObject(ClientPtrType client, String bucketName, String prefix, size_t expected);
 
 int main(int argc, char** argv)
 {
@@ -70,7 +74,7 @@ int main(int argc, char** argv)
     // put object with metadata
     Map metadata;
     metadata[METADATA_KEY] = METADATA_VAL;
-    putObject(client, bucketName, "test.simple", SMALL_TEST_FILE, metadata);
+    putObject(client, bucketName, "test.simple.meta", SMALL_TEST_FILE, metadata);
     putObject(client, bucketName, "test.medium.meta", MED_TEST_FILE, metadata);
     putObject(client, bucketName, "test.large.meta", LARGE_TEST_FILE, metadata);
 
@@ -109,7 +113,11 @@ int main(int argc, char** argv)
     // rangeObject(client, bucketName, "test.large.mp", LARGE_TEST_FILE, 1048576, 10485760);
 
     // copy object
+    copyObject(client, bucketName, "test.simple", "test.simple.copy");
+    getObject(client, bucketName, "test.simple.copy", SMALL_TEST_FILE);
+
     // list object
+    listObject(client, bucketName, "", -1);
     // delete all objects
     // put dummy objects
     // multi-page list obj
@@ -374,7 +382,6 @@ bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min, size_t max)
     }
     else
     {
-        std::cout << "Modification\n";
         // ensures that the file size is taken care of
         // off by 1 added coz aws starts counting from 1
         size1 = a->seekg(max + 1).tellg() - a->seekg(min).tellg();
@@ -501,6 +508,53 @@ void rangeObject(ClientPtrType client, String bucketName, String key, String pat
         if (!doFilesMatch(inpData.get(), file, min, max))
         {
             std::cout << base << "]: Content not equal ===\n";
+        }
+    }
+    std::cout << base << "]: End ===\n\n";
+}
+
+void copyObject(ClientPtrType client, String bucketName, String src, String dst)
+{
+    String base = "=== Copy Object [" + bucketName + "/" + src + "->" + dst;
+    std::cout << base << "]: Start ===\n";
+    auto objReq = Aws::S3::Model::CopyObjectRequest();
+    objReq.WithBucket(bucketName).WithCopySource(bucketName + "/" + src);
+    auto objRes = client->CopyObject(objReq.WithKey(dst));
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+    }
+    if (!std::get<0>(doesObjectExists(client, bucketName, dst)))
+    {
+        std::cout << base << "]: Failed ===\n";
+    }
+    std::cout << base << "]: End ===\n\n";
+}
+
+void listObject(ClientPtrType client, String bucketName, String prefix, size_t expected)
+{
+    String base = "=== List Object [" + bucketName + "/" + prefix;
+    std::cout << base << "]: Start ===\n";
+    auto objReq = Aws::S3::Model::ListObjectsRequest();
+    objReq.WithBucket(bucketName).WithPrefix(prefix);;
+    auto objRes = client->ListObjects(objReq);
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+    }
+    for (Aws::S3::Model::Object it: objRes.GetResult().GetContents())
+    {
+        std::cout << "Name: " << it.GetKey() <<
+                     "\tSize: " << it.GetSize() << "\n";
+    }
+    if (expected != size_t(-1))
+    {
+        size_t count = objRes.GetResult().GetContents().size();
+        if (expected != count)
+        {
+            std::cout << base << "]: Failed ===\n";
+            std::cout << "Expected " << expected << " objects, got " <<
+                         count << "\n";
         }
     }
     std::cout << base << "]: End ===\n\n";
