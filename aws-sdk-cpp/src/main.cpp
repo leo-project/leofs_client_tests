@@ -87,8 +87,8 @@ int main(int argc, char** argv)
 
     // put object in parts
     putObjectMp(client, bucketName, "test.simple.mp", SMALL_TEST_FILE);
-    putObjectMp(client, bucketName, "test.medium", MED_TEST_FILE);
-    putObjectMp(client, bucketName, "test.large", LARGE_TEST_FILE);
+    putObjectMp(client, bucketName, "test.medium.mp", MED_TEST_FILE);
+    putObjectMp(client, bucketName, "test.large.mp", LARGE_TEST_FILE);
 
     // put object in parts with metadata
     putObjectMp(client, bucketName, "test.simple.meta.mp", SMALL_TEST_FILE, metadata);
@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 
     // put dummy objects
     putObject(client, bucketName, "test.small.", SMALL_TEST_FILE, Map(), 35);
-    listObjects(client, bucketName, "", -1);
+    listObjects(client, bucketName, "", 35);
 
     // multi-page list obj
     // multi-delete
@@ -439,6 +439,7 @@ bool doFilesMatch(Aws::FStream* a, Aws::IOStream& b, size_t min, size_t max)
 
         if (memcmp(buffer1, buffer2, size))
         {
+            std::cout << "Offset: " << (size_t(size1) - remaining) << "\n";
             for (size_t i = 0; i < size; ++i)
             {
                 std::cout << uint16_t(buffer1[i]) << ":" <<
