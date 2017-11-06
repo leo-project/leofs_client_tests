@@ -453,18 +453,18 @@ function setBucketAcl($bucketName, $permission) {
 
 function doesFileMatch($stream1, $stream2) {
     $count = 0;
-    while(true) {
-        $b1 = fread($stream1->getStream(), 4096);
-        $b2 = fread($stream2->getStream(), 4096);
+    if ($stream1->getSize() != $stream1->getSize()) {
+        return false;
+    }
+    while($count < $stream1->getSize()) {
+        $b1 = $stream1->read(4096);
+        $b2 = $stream2->read(4096);
         $count = $count + strlen($b1);
-        if ($stream1->feof()) {
-            return $stream2->feof();
-        } else if ($stream2->feof()) {
-            return $stream1->feof();
-        } elseif ($b1 != $b2) {
+        if ($b1 != $b2) {
             return false;
         }
     }
+    return true;
 }
 
 ?>
