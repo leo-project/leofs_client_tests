@@ -91,6 +91,7 @@ def main()
 
         # Delete All Object Test
         deleteAllObjects(bucket)
+        sleep(3)
         listObject(bucket, "", 0)
 
         # Multiple Page List Object Test
