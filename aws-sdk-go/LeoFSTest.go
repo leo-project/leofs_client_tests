@@ -110,6 +110,7 @@ func main() {
 
 	// Delete All Object Test
 	deleteAllObjects(Bucket)
+	time.Sleep(time.Second * 3)
 	listObject(Bucket, "", 0)
 
 	// Multiple Page List Object Test
