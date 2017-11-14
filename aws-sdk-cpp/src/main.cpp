@@ -11,6 +11,7 @@
 #include <aws/s3/model/CopyObjectRequest.h>
 #include <aws/s3/model/CreateBucketRequest.h>
 #include <aws/s3/model/CreateMultipartUploadRequest.h>
+#include <aws/s3/model/Delete.h>
 #include <aws/s3/model/DeleteBucketRequest.h>
 #include <aws/s3/model/DeleteObjectRequest.h>
 #include <aws/s3/model/DeleteObjectsRequest.h>
@@ -21,6 +22,7 @@
 #include <aws/s3/model/ListObjectsRequest.h>
 #include <aws/s3/model/ListPartsRequest.h>
 #include <aws/s3/model/MultipartUpload.h>
+#include <aws/s3/model/ObjectIdentifier.h>
 #include <aws/s3/model/PutObjectRequest.h>
 #include <aws/s3/model/UploadPartRequest.h>
 
@@ -43,8 +45,9 @@ void getObject(ClientPtrType client, String bucketName, String key, String path,
 void getFakeObject(ClientPtrType client, String bucketName, String key);
 void rangeObject(ClientPtrType client, String bucketName, String key, String path, size_t min, size_t max);
 void copyObject(ClientPtrType client, String bucketName, String src, String dst);
-Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, bool pass = false);
+Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, int maxKeys = 0, bool debugCheck = false);
 void deleteObject(ClientPtrType client, String bucketName, String key);
+void deleteObjects(ClientPtrType client, String bucketName, String prefix, size_t num);
 void deleteAllObjects(ClientPtrType client, String bucketName);
 
 int main(int argc, char** argv)
@@ -131,11 +134,14 @@ int main(int argc, char** argv)
     listObjects(client, bucketName, "", 0);
 
     // put dummy objects
-    putObject(client, bucketName, "test.small.", SMALL_TEST_FILE, Map(), 35);
-    listObjects(client, bucketName, "", 35);
-
+    putObject(client, bucketName, "list/test.small.", SMALL_TEST_FILE, Map(), 35);
     // multi-page list obj
+    listObjects(client, bucketName, "list/", 35, 10);
+
     // multi-delete
+    deleteObjects(client, bucketName, "list/test.small.", 10);
+    listObjects(client, bucketName, "list/", 25);
+
     // get-put acl
 
     // delete bucket
@@ -567,27 +573,42 @@ void copyObject(ClientPtrType client, String bucketName, String src, String dst)
     std::cout << base << "]: End ===\n\n";
 }
 
-Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, bool pass)
+Aws::Vector<Object> listObjects(ClientPtrType client, String bucketName, String prefix, size_t expected, int maxKeys, bool debugCheck)
 {
     String base = "=== List Object [" + bucketName + "/" + prefix;
     std::cout << base << "]: Start ===\n";
     auto objReq = Aws::S3::Model::ListObjectsRequest();
     objReq.WithBucket(bucketName).WithPrefix(prefix);;
-    auto objRes = client->ListObjects(objReq);
-    if (!objRes.IsSuccess())
+    if (maxKeys)
     {
-        std::cout << base << "]: Client Side failure ===\n";
+        objReq.SetMaxKeys(maxKeys);
     }
-    if (!pass)
+    String marker = "";
+    size_t count = 0;
+    Aws::S3::Model::ListObjectsOutcome objRes;
+    do
     {
-        for (Object it: objRes.GetResult().GetContents())
+        objRes = client->ListObjects(objReq.WithMarker(marker));
+        if (!objRes.IsSuccess())
         {
-            std::cout << "Name: " << it.GetKey() <<
-                        "\tSize: " << it.GetSize() << "\n";
+            std::cout << base << "]: Client Side failure ===\n";
         }
+        count += objRes.GetResult().GetContents().size();
+        if (!debugCheck)
+        {
+            for (Object it: objRes.GetResult().GetContents())
+            {
+                std::cout << "Name: " << it.GetKey() <<
+                            "\tSize: " << it.GetSize() << "\n";
+            }
+            std::cout << "===== Page End =====\n";
+        }
+        marker = objRes.GetResult().GetNextMarker();
+    } while (objRes.GetResult().GetIsTruncated());
+    if (!debugCheck)
+    {
         if (expected != size_t(-1))
         {
-            size_t count = objRes.GetResult().GetContents().size();
             if (expected != count)
             {
                 std::cout << base << "]: Failed ===\n";
@@ -618,11 +639,35 @@ void deleteObject(ClientPtrType client, String bucketName, String key)
     std::cout << base << "]: End ===\n\n";
 }
 
+void deleteObjects(ClientPtrType client, String bucketName, String prefix, size_t num)
+{
+    String base = "=== Delete Objects [" + bucketName + "/" + prefix;
+    std::cout << base << "]: Start ===\n";
+    Aws::Vector<Aws::S3::Model::ObjectIdentifier> objects;
+    for (size_t i = 0; i < num; ++i)
+    {
+        objects.push_back(Aws::S3::Model::ObjectIdentifier().WithKey(prefix + std::to_string(i).c_str()));
+    }
+
+    auto objReq = Aws::S3::Model::DeleteObjectsRequest();
+    objReq.WithBucket(bucketName).WithDelete(Aws::S3::Model::Delete().WithObjects(objects));
+    auto objRes = client->DeleteObjects(objReq);
+    if (!objRes.IsSuccess())
+    {
+        std::cout << base << "]: Client Side failure ===\n";
+    }/*
+    if (std::get<0>(doesObjectExists(client, bucketName, key)))
+    {
+        std::cout << base << "]: Deletion of " << key << " Failed ===\n";
+    }*/
+    std::cout << base << "]: End ===\n\n";
+}
+
 void deleteAllObjects(ClientPtrType client, String bucketName)
 {
     String base = "=== Delete All Objects [" + bucketName;
     std::cout << base << "]: Start ===\n";
-    auto objects = listObjects(client, bucketName, "", -1, true);
+    auto objects = listObjects(client, bucketName, "", -1, 0, true);
     for (auto obj: objects)
     {
         deleteObject(client, bucketName, obj.GetKey());
