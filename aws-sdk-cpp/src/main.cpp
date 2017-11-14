@@ -254,6 +254,9 @@ void putObject(ClientPtrType client, String bucketName, String key, String path,
     }
     for (size_t i = 0; i < loop; ++i)
     {
+        auto inpData = Aws::MakeShared<Aws::FStream>("PutObjectInputStream",
+                path.c_str(), std::ios_base::in | std::ios_base::binary);
+        objReq.SetBody(inpData);;
         String key_suffix = std::to_string(i).c_str();
         auto objRes = client->PutObject(objReq.WithKey(key + key_suffix));
         if (!objRes.IsSuccess())
