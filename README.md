@@ -6,8 +6,11 @@ Generate Test Data with
 $ cd temp_data; ./gen.sh
 ```
 
-**NOTE**:You may need to modify the ```/etc/hosts``` file to add an entry seperated by space to the line starting with 127.0.0.1
-The entry format is of type: <testname>.localhost
+Some SDKs (e.g. erlcloud, aws-sdk-php, aws-sdk-cpp), connect to {BUCKETNAME}.{HOST},
+you have to add corresponding entries to `/etc/hosts` for name resolving
+Reference: http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
+
+Eg: For localhost, add `<testname>.localhost` to the line starting with 127.0.0.1, seperated by space.
 
 ### Command Format
 ```bash
