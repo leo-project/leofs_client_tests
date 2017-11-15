@@ -22,7 +22,7 @@ Note that some libraries only support v2/v4 signature
 #### Get the library
 
 ```bash
-$ git submodule init
+$ git submodule update -i
 ```
 
 #### Execute the test-case
@@ -31,7 +31,7 @@ $ git submodule init
 $ cd aws-sdk-cpp
 $ mkdir build
 $ cd build
-$ cmake ..
+$ cmake -DBUILD_ONLY="s3" ..
 $ make
 $ LeoFSTest.cpp v4 localhost 8080 testc
 ```
