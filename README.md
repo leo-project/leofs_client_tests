@@ -6,15 +6,35 @@ Generate Test Data with
 $ cd temp_data; ./gen.sh
 ```
 
-For some SDKs (e.g. erlcloud, aws-sdk-php, was-sdk-cpp), they connect to {BUCKETNAME}.{HOST},
-you have to add corresponding entries to /etc/hosts for name resolving
+Some SDKs (e.g. erlcloud, aws-sdk-php, aws-sdk-cpp), connect to {BUCKETNAME}.{HOST},
+you have to add corresponding entries to `/etc/hosts` for name resolving
 Reference: http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
+
+Eg: For localhost, add `<testname>.localhost` to the line starting with 127.0.0.1, seperated by space.
 
 ### Command Format
 ```bash
 $ tester [SIGNATURE_VERSION] [HOST] [PORT] [BUCKET]
 ```
 Note that some libraries only support v2/v4 signature
+
+### C++ - aws-sdk-cpp
+#### Get the library
+
+```bash
+$ git submodule update -i
+```
+
+#### Execute the test-case
+
+```bash
+$ cd aws-sdk-cpp
+$ mkdir build
+$ cd build
+$ cmake -DBUILD_ONLY="s3" ..
+$ make
+$ LeoFSTest.cpp v4 localhost 8080 testc
+```
 
 ### GO - aws-sdk-go
 #### Install the libraries
@@ -67,7 +87,7 @@ $ php LeoFSTest.php v2 localhost 8080 testp
 * content_type depends on libmagic
 
 ```bash
-## CentOS/Fedora/RHEL: 
+## CentOS/Fedora/RHEL:
 $ sudo yum install libmagic-devel
 $ sudo apt-get install ruby-devel
 
@@ -90,7 +110,7 @@ $ cd aws-sdk-ruby
 $ ruby LeoFSTest.rb v4 localhost 8080 testr
 or
 $ ruby LeoFSTest.rb v2 localhost 8080 testr
-``` 
+```
 
 ### Python - boto
 #### Install the libraries

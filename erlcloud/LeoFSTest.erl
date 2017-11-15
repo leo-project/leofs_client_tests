@@ -59,7 +59,7 @@ main(Args)->
     %% Put Object with Metadata Test
     putObjectWithMetadata(Bucket, "test.simple.meta", ?SMALL_TEST_F, MetadataMap),
     putObjectWithMetadata(Bucket, "test.large.meta", ?LARGE_TEST_F, MetadataMap),
-    
+
     %% Multipart Upload Test
     mpObject(Bucket, "test.simple.mp",  ?SMALL_TEST_F),
     mpObject(Bucket, "test.large.mp",   ?LARGE_TEST_F),
@@ -87,14 +87,14 @@ main(Args)->
     %% Get Object with Metadata Test
     getObjectWithMetadata(Bucket, "test.simple.meta", ?SMALL_TEST_F, MetadataMap),
     getObjectWithMetadata(Bucket, "test.large.meta", ?LARGE_TEST_F, MetadataMap),
-    
+
     %% Get Not Exist Object Test
     getNotExist(Bucket, "test.noexist"),
 
     %% Range Get Object Test
-    rangeObject(Bucket, "test.simple",      ?SMALL_TEST_F, 1, 4), 
-    rangeObject(Bucket, "test.simple.mp",   ?SMALL_TEST_F, 1, 4), 
-    rangeObject(Bucket, "test.large",       ?LARGE_TEST_F, 1048576, 10485760), 
+    rangeObject(Bucket, "test.simple",      ?SMALL_TEST_F, 1, 4),
+    rangeObject(Bucket, "test.simple.mp",   ?SMALL_TEST_F, 1, 4),
+    rangeObject(Bucket, "test.large",       ?LARGE_TEST_F, 1048576, 10485760),
     rangeObject(Bucket, "test.large.mp",    ?LARGE_TEST_F, 1048576, 10485760),
     rangeObject(Bucket, "test.large.mp",    ?LARGE_TEST_F, 31457280, 41943040),
     rangeObject(Bucket, "test.large.mp",    ?LARGE_TEST_F, 41943040, 52420000),
@@ -123,6 +123,7 @@ main(Args)->
 %%    setBucketAcl(Bucket, "private"),
 %%    setBucketAcl(Bucket, "public-read"),
 %%    setBucketAcl(Bucket, "public-read-write"),
+    deleteBucket(Bucket),
     ok.
 
 init(_SignVer, Host, Port) ->
@@ -139,6 +140,14 @@ createBucket(BucketName) ->
     io:format("===== Create Bucket [~s] Start =====\n", [BucketName]),
     erlcloud_s3:create_bucket(BucketName, Conf),
     io:format("===== Create Bucket End =====\n"),
+    io:format("\n"),
+    ok.
+
+deleteBucket(BucketName) ->
+    Conf = get(s3),
+    io:format("===== Delete Bucket [~s] Start =====\n", [BucketName]),
+    erlcloud_s3:delete_bucket(BucketName, Conf),
+    io:format("===== Delete Bucket End =====\n"),
     io:format("\n"),
     ok.
 
@@ -202,7 +211,7 @@ mpObject(BucketName, Key, Path) ->
 headObject(BucketName, Key, Path) ->
     Conf = get(s3),
     io:format("===== Head Object [~s/~s] Start =====\n", [BucketName, Key]),
-    Meta = erlcloud_s3:get_object_metadata(BucketName, Key, Conf), 
+    Meta = erlcloud_s3:get_object_metadata(BucketName, Key, Conf),
     ETag = string:substr(proplists:get_value(etag, Meta), 2, 32),
     CL = list_to_integer(proplists:get_value(content_length, Meta)),
     {ok, Bin} = file:read_file(Path),
@@ -261,7 +270,7 @@ getNotExist(BucketName, Key) ->
         erlcloud_s3:get_object(BucketName, Key, Conf),
         io:format("Should NOT Exist!\n"),
         throw(error)
-    catch 
+    catch
         error:{aws_error,{http_error, 404, _, _}} ->
             ok;
         error:{aws_error,{http_error, 403, _, _}} ->
