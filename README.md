@@ -12,6 +12,13 @@ Reference: http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
 
 Eg: For localhost, add `<testname>.localhost` to the line starting with 127.0.0.1, seperated by space.
 
+### LeoFS Cluster Setting
+Turn off cache features on `leo_gateway.conf` as following.
+```ini
+cache.cache_ram_capacity = 0
+cache.cache_disc_capacity = 0
+```
+
 ### Command Format
 ```bash
 $ tester [SIGNATURE_VERSION] [HOST] [PORT] [BUCKET]
@@ -70,6 +77,7 @@ $ ant -Dsignver=v2 -Dhost="localhost" -Dport=8080 -Dbucket="testj"
 $ cd aws-sdk-php
 $ curl -sS https://getcomposer.org/installer | php
 $ php composer.phar install
+$ sudo apt-get install php-curl php-xml php-simplexml
 ```
 
 #### Execute the test-case
